@@ -1,0 +1,14 @@
+{
+  "name": "nexora-arquitetura-claud",
+  "version": "1.0.0",
+  "description": "NEXORA Field Service ERP - Micro-Frontends Architecture (Host & Remote)",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run dev --prefix remote\" \"npm run dev --prefix host\"",
+    "build": "npm run build --prefix remote && npm run build --prefix host",
+    "install:all": "npm install && npm install --prefix remote && npm install --prefix host"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
