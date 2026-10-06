@@ -59,5 +59,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Remote List server running on port ${PORT}`);
+  console.log(`Host Dashboard server running on port ${PORT}`);
 });

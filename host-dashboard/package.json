@@ -1,11 +1,11 @@
 {
-  "name": "nexora-remote-list",
+  "name": "nexora-host-dashboard",
   "version": "1.0.0",
-  "description": "MFE Remote 2 - Tabela e Controle de Ordens de Serviço do NEXORA ERP",
+  "description": "Host Shell 2 - Dashboard & Analytics Controller do NEXORA ERP",
   "main": "src/index.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "webpack serve --mode development --port 3002",
+    "dev": "webpack serve --mode development --port 3004",
     "build": "webpack --mode production"
   },
   "dependencies": {

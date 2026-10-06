@@ -6,9 +6,6 @@ const deps = require('./package.json').dependencies;
 
 module.exports = (env, argv) => {
   const remoteUrl = process.env.REMOTE_URL || 'http://localhost:3001/remoteEntry.js';
-  const remoteListUrl = process.env.REMOTE_LIST_URL || 'http://localhost:3002/remoteEntry.js';
-  const remoteDashboardUrl = process.env.REMOTE_DASHBOARD_URL || 'http://localhost:3003/remoteEntry.js';
-
   return {
     entry: './src/index.js',
     mode: argv.mode || 'development',
@@ -44,15 +41,11 @@ module.exports = (env, argv) => {
     plugins: [
       new webpack.DefinePlugin({
         'process.env.REMOTE_URL': JSON.stringify(remoteUrl),
-        'process.env.REMOTE_LIST_URL': JSON.stringify(remoteListUrl),
-        'process.env.REMOTE_DASHBOARD_URL': JSON.stringify(remoteDashboardUrl),
       }),
       new ModuleFederationPlugin({
         name: 'host',
         remotes: {
           remote: `remote@${remoteUrl}`,
-          remoteList: `remoteList@${remoteListUrl}`,
-          remoteDashboard: `remoteDashboard@${remoteDashboardUrl}`,
         },
         shared: {
           react: {
