@@ -1,9 +1,10 @@
 import React, { useState, Suspense } from 'react';
 
-// Importação dinâmica do Remote OrderForm via Module Federation
+// Importações dinâmicas dos componentes remotos do MFE Remote via Module Federation
 const RemoteOrderForm = React.lazy(() => import('remote/OrderForm'));
+const RemoteDashboard = React.lazy(() => import('remote/Dashboard'));
 
-// Componente Error Boundary para resiliência caso o Remote falhe ou esteja indisponível
+// Componente Error Boundary para resiliência caso o Remote esteja indisponível
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -24,7 +25,7 @@ class ErrorBoundary extends React.Component {
         <div style={styles.errorContainer}>
           <h3 style={styles.errorTitle}>⚠️ Erro ao carregar o Micro-Frontend Remoto</h3>
           <p style={styles.errorDesc}>
-            Não foi possível se conectar ao Remote (porta 3001). Verifique se o serviço remoto está em execução.
+            Não foi possível conectar ao MFE Remote. Verifique se a aplicação remota está ativa e com CORS configurado.
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}
@@ -40,7 +41,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const App = () => {
-  // Estado inicial com ordens de serviço de demonstração no NEXORA
+  // Estado centralizado de Ordens de Serviço no Host
   const [orders, setOrders] = useState([
     {
       id: 'OS-1001',
@@ -74,7 +75,10 @@ const App = () => {
     },
   ]);
 
-  // Função callback para adicionar nova OS criada no Remote
+  // Controle da aba ativa no Host Container
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Callback para receber novas OS enviadas pelo MFE Remote OrderForm
   const handleAddOrder = (newOrder) => {
     setOrders((prevOrders) => [newOrder, ...prevOrders]);
   };
@@ -142,130 +146,175 @@ const App = () => {
         </div>
 
         <div style={styles.navGroupInfo}>
-          <span style={styles.mfeTag}>Host Container (Porta 3000)</span>
+          <span style={styles.mfeTag}>Host Shell (Porta 3000)</span>
           <span style={styles.groupBadge}>Atividade Formativa 13</span>
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Menu de Navegação por Módulos (Host navigation) */}
+      <div style={styles.navigationBar}>
+        <div style={styles.navInner}>
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            style={{
+              ...styles.navTab,
+              ...(activeTab === 'dashboard' ? styles.activeNavTab : {}),
+            }}
+          >
+            📊 MFE Dashboard & Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            style={{
+              ...styles.navTab,
+              ...(activeTab === 'orders' ? styles.activeNavTab : {}),
+            }}
+          >
+            📋 MFE Abertura & Gestão de OS
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
       <main style={styles.mainContent}>
-        {/* Seção 1: Componente Remoto (OrderForm) via Webpack Module Federation */}
-        <section style={styles.section}>
-          <ErrorBoundary>
-            <Suspense
-              fallback={
-                <div style={styles.loadingBox}>
-                  <div style={styles.spinner}></div>
-                  <span>Carregando MFE Remoto (remote/OrderForm)...</span>
+        {activeTab === 'dashboard' && (
+          <section style={styles.section}>
+            <ErrorBoundary>
+              <Suspense
+                fallback={
+                  <div style={styles.loadingBox}>
+                    <div style={styles.spinner}></div>
+                    <span>Carregando MFE Dashboard Remoto (remote/Dashboard)...</span>
+                  </div>
+                }
+              >
+                <RemoteDashboard orders={orders} />
+              </Suspense>
+            </ErrorBoundary>
+          </section>
+        )}
+
+        {activeTab === 'orders' && (
+          <>
+            {/* Componente Remoto (OrderForm) via Webpack Module Federation */}
+            <section style={styles.section}>
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div style={styles.loadingBox}>
+                      <div style={styles.spinner}></div>
+                      <span>Carregando MFE Formulário Remoto (remote/OrderForm)...</span>
+                    </div>
+                  }
+                >
+                  <RemoteOrderForm onAddOrder={handleAddOrder} />
+                </Suspense>
+              </ErrorBoundary>
+            </section>
+
+            {/* Painel e Tabela de Controle de Ordens de Serviço (Host) */}
+            <section style={styles.section}>
+              <div style={styles.tableCard}>
+                <div style={styles.tableHeader}>
+                  <div>
+                    <h2 style={styles.tableTitle}>Painel Geral de Ordens de Serviço</h2>
+                    <p style={styles.tableSubtitle}>
+                      Listagem integrada e controle em tempo real dos atendimentos de campo
+                    </p>
+                  </div>
+                  <div style={styles.countBadge}>
+                    Total: <strong>{orders.length} OS</strong>
+                  </div>
                 </div>
-              }
-            >
-              <RemoteOrderForm onAddOrder={handleAddOrder} />
-            </Suspense>
-          </ErrorBoundary>
-        </section>
 
-        {/* Seção 2: Tabela de Gestão de Ordens de Serviço (Host) */}
-        <section style={styles.section}>
-          <div style={styles.tableCard}>
-            <div style={styles.tableHeader}>
-              <div>
-                <h2 style={styles.tableTitle}>Painel de Ordens de Serviço</h2>
-                <p style={styles.tableSubtitle}>
-                  Listagem integrada e controle em tempo real dos atendimentos de campo
-                </p>
-              </div>
-              <div style={styles.countBadge}>
-                Total: <strong>{orders.length} OS</strong>
-              </div>
-            </div>
-
-            <div style={styles.tableResponsive}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.thRow}>
-                    <th style={styles.th}>Código OS</th>
-                    <th style={styles.th}>Cliente</th>
-                    <th style={styles.th}>Serviço Solicitado</th>
-                    <th style={styles.th}>Técnico Responsável</th>
-                    <th style={styles.th}>Prioridade</th>
-                    <th style={styles.th}>Status</th>
-                    <th style={styles.th}>Valor Est.</th>
-                    <th style={{ ...styles.th, textAlign: 'center' }}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" style={styles.emptyTd}>
-                        Nenhuma ordem de serviço cadastrada no momento.
-                      </td>
-                    </tr>
-                  ) : (
-                    orders.map((ord) => (
-                      <tr key={ord.id} style={styles.tr}>
-                        <td style={styles.tdCode}>{ord.id}</td>
-                        <td style={styles.tdBold}>{ord.cliente}</td>
-                        <td style={styles.tdDesc}>{ord.servico}</td>
-                        <td style={styles.tdText}>
-                          {ord.tecnico !== 'Não atribuído' ? (
-                            <span>👤 {ord.tecnico}</span>
-                          ) : (
-                            <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Não atribuído</span>
-                          )}
-                        </td>
-                        <td style={styles.td}>
-                          <span
-                            style={{
-                              ...styles.badge,
-                              ...getPriorityBadgeStyle(ord.prioridade),
-                            }}
-                          >
-                            {ord.prioridade}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span
-                            style={{
-                              ...styles.badgeStatus,
-                              ...getStatusBadgeStyle(ord.situacao),
-                            }}
-                          >
-                            {ord.situacao}
-                          </span>
-                        </td>
-                        <td style={styles.tdValue}>
-                          R$ {parseFloat(ord.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td style={styles.tdActions}>
-                          {ord.situacao !== 'Concluída' && (
-                            <button
-                              onClick={() => handleCompleteOrder(ord.id)}
-                              title="Marcar como Concluída"
-                              style={styles.btnComplete}
-                            >
-                              ✓ Concluir
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDeleteOrder(ord.id)}
-                            title="Excluir Ordem"
-                            style={styles.btnDelete}
-                          >
-                            🗑️ Excluir
-                          </button>
-                        </td>
+                <div style={styles.tableResponsive}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr style={styles.thRow}>
+                        <th style={styles.th}>Código OS</th>
+                        <th style={styles.th}>Cliente</th>
+                        <th style={styles.th}>Serviço Solicitado</th>
+                        <th style={styles.th}>Técnico Responsável</th>
+                        <th style={styles.th}>Prioridade</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Valor Est.</th>
+                        <th style={{ ...styles.th, textAlign: 'center' }}>Ações</th>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
+                    </thead>
+                    <tbody>
+                      {orders.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" style={styles.emptyTd}>
+                            Nenhuma ordem de serviço cadastrada no momento.
+                          </td>
+                        </tr>
+                      ) : (
+                        orders.map((ord) => (
+                          <tr key={ord.id} style={styles.tr}>
+                            <td style={styles.tdCode}>{ord.id}</td>
+                            <td style={styles.tdBold}>{ord.cliente}</td>
+                            <td style={styles.tdDesc}>{ord.servico}</td>
+                            <td style={styles.tdText}>
+                              {ord.tecnico !== 'Não atribuído' ? (
+                                <span>👤 {ord.tecnico}</span>
+                              ) : (
+                                <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Não atribuído</span>
+                              )}
+                            </td>
+                            <td style={styles.td}>
+                              <span
+                                style={{
+                                  ...styles.badge,
+                                  ...getPriorityBadgeStyle(ord.prioridade),
+                                }}
+                              >
+                                {ord.prioridade}
+                              </span>
+                            </td>
+                            <td style={styles.td}>
+                              <span
+                                style={{
+                                  ...styles.badgeStatus,
+                                  ...getStatusBadgeStyle(ord.situacao),
+                                }}
+                              >
+                                {ord.situacao}
+                              </span>
+                            </td>
+                            <td style={styles.tdValue}>
+                              R$ {parseFloat(ord.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={styles.tdActions}>
+                              {ord.situacao !== 'Concluída' && (
+                                <button
+                                  onClick={() => handleCompleteOrder(ord.id)}
+                                  title="Marcar como Concluída"
+                                  style={styles.btnComplete}
+                                >
+                                  ✓ Concluir
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteOrder(ord.id)}
+                                title="Excluir Ordem"
+                                style={styles.btnDelete}
+                              >
+                                🗑️ Excluir
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
       </main>
 
-      {/* Rodapé com integrantes do grupo */}
+      {/* Rodapé do ERP NEXORA */}
       <footer style={styles.footer}>
         <div style={styles.footerContent}>
           <div>
@@ -294,6 +343,7 @@ const styles = {
     flexDirection: 'column',
     backgroundColor: '#F8FAFC',
     color: '#1E293B',
+    fontFamily: 'Inter, system-ui, sans-serif',
   },
   navbar: {
     backgroundColor: '#06265F',
@@ -353,6 +403,33 @@ const styles = {
     fontWeight: '600',
     padding: '6px 12px',
     borderRadius: '6px',
+  },
+  navigationBar: {
+    backgroundColor: '#041B44',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    padding: '0 32px',
+  },
+  navInner: {
+    maxWidth: '1240px',
+    margin: '0 auto',
+    display: 'flex',
+    gap: '8px',
+  },
+  navTab: {
+    backgroundColor: 'transparent',
+    color: '#94A3B8',
+    border: 'none',
+    borderBottom: '3px solid transparent',
+    padding: '12px 20px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  activeNavTab: {
+    color: '#FFFFFF',
+    borderBottomColor: '#0B5FD7',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   mainContent: {
     flex: 1,

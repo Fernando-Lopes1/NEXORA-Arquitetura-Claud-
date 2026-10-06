@@ -20,17 +20,17 @@ Este repositório contém a implementação da arquitetura de Micro-Frontends (M
 
 A aplicação é subdividida em dois projetos independentes que compartilham dependências base (`react` e `react-dom` como singletons):
 
-1. **Remote (`/remote`) — Micro-frontend de Ordens de Serviço**:
+1. **Remote (`/remote`) — Micro-frontend de Funcionalidades Remotas**:
    - Roda por padrão na **porta 3001**.
-   - Expõe o componente `./OrderForm` através do plugin **Module Federation** do Webpack 5.
+   - Expõe os módulos `./OrderForm` (Abertura de OS) e `./Dashboard` (KPIs & Métricas Analíticas) via **Module Federation** do Webpack 5.
    - Possui cabeçalhos de CORS habilitados (`Access-Control-Allow-Origin: *`) para consumo cross-origin em desenvolvimento e produção.
-   - Contém formulário completo de Abertura de Ordem de Serviço com validação visual de campos (Cliente, Serviço Solicitado, Técnico Responsável, Prioridade, Status e Valor Estimado R$).
+   - Contém formulário completo de Abertura de Ordem de Serviço com validações e o painel analítico de performance com indicadores em tempo real, taxas de conclusão e volume financeiro.
 
 2. **Host (`/host`) — Container Principal / Shell Application**:
    - Roda por padrão na **porta 3000**.
    - Atua como a casca (Shell) principal do NEXORA ERP, com suporte ao Design System e marca oficial.
-   - Consome dinamicamente o MFE Remote (`remote/OrderForm`) utilizando `React.lazy` e `React.Suspense` com fallback visual e resiliência via `ErrorBoundary`.
-   - Mantém o painel de listagem e controle em tempo real de Ordens de Serviço (com badges coloridos de status/prioridade, ações de alteração de situação e exclusão).
+   - Consome dinamicamente os MFEs Remotos (`remote/OrderForm` e `remote/Dashboard`) utilizando `React.lazy` e `React.Suspense` com fallback visual e resiliência via `ErrorBoundary`.
+   - Oferece navegação por abas (`MFE Dashboard` e `MFE Abertura & Gestão de OS`) e mantém a listagem/controle em tempo real de Ordens de Serviço.
 
 ---
 
