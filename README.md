@@ -2,7 +2,7 @@
 
 **Atividade Formativa 13 - Arquitetura em Nuvem & Micro-Frontends**
 
-Este repositório contém a implementação da arquitetura de Micro-Frontends (MFE) para o sistema **NEXORA**, um ERP modular voltado para Gestão de Serviços de Campo (*Field Service Management*). A solução utiliza **React 18** e **Webpack 5 Module Federation**, configurada e pronta para implantação em duas instâncias independentes no **Azure Static Web Apps**.
+Este repositório contém a implementação da arquitetura de Micro-Frontends (MFE) para o sistema **NEXORA**, um ERP modular voltado para Gestão de Serviços de Campo (*Field Service Management*). A solução utiliza **React 18** e **Webpack 5 Module Federation**, configurada e implantada em três instâncias independentes no **Azure Web Apps**.
 
 ---
 
@@ -18,29 +18,30 @@ Este repositório contém a implementação da arquitetura de Micro-Frontends (M
 
 ## 🏗️ Arquitetura de Micro-Frontends (MFE)
 
-A aplicação é subdividida em dois projetos independentes que compartilham dependências base (`react` e `react-dom` como singletons):
+A aplicação é subdividida em três projetos independentes e desacoplados:
 
-1. **Remote (`/remote`) — Micro-frontend de Funcionalidades Remotas**:
-   - Roda por padrão na **porta 3001**.
-   - Expõe os módulos `./OrderForm` (Abertura de OS) e `./Dashboard` (KPIs & Métricas Analíticas) via **Module Federation** do Webpack 5.
-   - Possui cabeçalhos de CORS habilitados (`Access-Control-Allow-Origin: *`) para consumo cross-origin em desenvolvimento e produção.
-   - Contém formulário completo de Abertura de Ordem de Serviço com validações e o painel analítico de performance com indicadores em tempo real, taxas de conclusão e volume financeiro.
+1. **Remote 1 (`/remote`) — Micro-frontend de Ordens de Serviço (Azure Web App 1)**:
+   - Roda por padrão na **porta 3001** (local) ou em sua própria URL na Azure.
+   - Expõe o módulo `./OrderForm` via **Module Federation**.
+   - Permite a abertura e registro completo de Ordens de Serviço com validação visual de campos.
 
-2. **Host (`/host`) — Container Principal / Shell Application**:
-   - Roda por padrão na **porta 3000**.
-   - Atua como a casca (Shell) principal do NEXORA ERP, com suporte ao Design System e marca oficial.
-   - Consome dinamicamente os MFEs Remotos (`remote/OrderForm` e `remote/Dashboard`) utilizando `React.lazy` e `React.Suspense` com fallback visual e resiliência via `ErrorBoundary`.
-   - Oferece navegação por abas (`MFE Dashboard` e `MFE Abertura & Gestão de OS`) e mantém a listagem/controle em tempo real de Ordens de Serviço.
+2. **Remote 2 (`/remote-dashboard`) — Micro-frontend de Dashboard & Analytics (Azure Web App 2)**:
+   - Roda por padrão na **porta 3002** (local) ou em sua própria URL na Azure.
+   - Expõe o módulo `./Dashboard` via **Module Federation**.
+   - Exibe indicadores estratégicos (KPIs), taxa de conclusão, volume financeiro R$, distribuição por status/prioridade e carga por técnico.
+
+3. **Host (`/host`) — Container Principal / Shell Application (Azure Web App 3)**:
+   - Roda por padrão na **porta 3000** (local) ou em sua própria URL na Azure.
+   - Atua como a casca (Shell) principal do NEXORA ERP, integrando dinamicamente ambos os MFEs Remotos (`remote/OrderForm` e `remoteDashboard/Dashboard`) com `React.lazy`, `React.Suspense` e `ErrorBoundary`.
+   - Oferece navegação por abas para alternar entre os módulos remotos hospedados de forma independente.
 
 ---
 
-## 🎨 Design System NEXORA
+## 🌐 URLs Públicas (Azure Web Apps - Canadá Central)
 
-- **Navy Principal**: `#06265F` (Usado em barras de navegação, cabeçalhos de cartões e elementos estruturais).
-- **Azul Ação**: `#0B5FD7` (Usado em botões primários, destaques e links ativos).
-- **Fundo**: `#F8FAFC` (Fundo suave para contraste e legibilidade).
-- **Tipografia**: `Inter` / `sans-serif`.
-- **Bordas**: Raios arredondados de `8px` a `12px`.
+- **Host Shell Application**: [https://nexora-host-fernando.azurewebsites.net](https://nexora-host-fernando.azurewebsites.net)
+- **Remote 1 (Ordens de Serviço)**: [https://nexora-remote-fernando.azurewebsites.net](https://nexora-remote-fernando.azurewebsites.net)
+- **Remote 2 (Dashboard & Analytics)**: [https://nexora-dashboard-fernando.azurewebsites.net](https://nexora-dashboard-fernando.azurewebsites.net)
 
 ---
 
@@ -48,31 +49,9 @@ A aplicação é subdividida em dois projetos independentes que compartilham dep
 
 ```text
 NEXORA(Arquitetura Claud)/
-├── host/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── App.jsx
-│   │   ├── bootstrap.jsx
-│   │   └── index.js
-│   ├── public/
-│   │   └── index.html
-│   ├── package.json
-│   └── webpack.config.js
-├── remote/
-│   ├── src/
-│   │   ├── components/
-│   │   │   └── OrderForm.jsx
-│   │   ├── App.jsx
-│   │   ├── bootstrap.jsx
-│   │   └── index.js
-│   ├── public/
-│   │   └── index.html
-│   ├── package.json
-│   └── webpack.config.js
-├── .github/
-│   └── workflows/
-│       ├── azure-static-web-apps-host.yml
-│       └── azure-static-web-apps-remote.yml
+├── host/                     # App Shell Container (Porta 3000)
+├── remote/                   # MFE 1: Ordens de Serviço (Porta 3001)
+├── remote-dashboard/         # MFE 2: Dashboard & Analytics (Porta 3002)
 ├── GRUPO.md
 ├── README.md
 ├── .gitignore
@@ -81,50 +60,15 @@ NEXORA(Arquitetura Claud)/
 
 ---
 
-## 🚀 Como Executar o Projeto Localmente
-
-### 1. Pré-requisitos
-- Node.js (versão LTS v18 ou superior)
-- npm ou yarn
-
-### 2. Instalação das Dependências
-Na raiz do projeto, execute o script para instalar as dependências da raiz, do Host e do Remote:
+## 🚀 Como Executar Localmente
 
 ```bash
-npm run install:all
+# Terminal 1 - Remote 1 (Porta 3001)
+cd remote && npm install && npm run dev
+
+# Terminal 2 - Remote 2 (Porta 3002)
+cd remote-dashboard && npm install && npm run dev
+
+# Terminal 3 - Host Shell (Porta 3000)
+cd host && npm install && npm run dev
 ```
-
-*(Ou instale manualmente em cada pasta: `npm install`, `cd remote && npm install`, `cd ../host && npm install`)*
-
-### 3. Execução Simultânea (Host + Remote)
-Para iniciar ambos os micro-frontends simultaneamente em modo de desenvolvimento:
-
-```bash
-npm run dev
-```
-
-- **Host (Shell)**: [http://localhost:3000](http://localhost:3000)
-- **Remote (OrderForm MFE)**: [http://localhost:3001](http://localhost:3001)
-
----
-
-## ☁️ Deploy no Azure Static Web Apps
-
-O projeto está preparado para deploy automatizado através do GitHub Actions em duas instâncias separadas do **Azure Static Web Apps**:
-
-1. **Instância do Remote**:
-   - `app_location`: `/remote`
-   - `output_location`: `dist`
-   - Secret necessária no GitHub: `AZURE_STATIC_WEB_APPS_API_TOKEN_REMOTE`
-
-2. **Instância do Host**:
-   - `app_location`: `/host`
-   - `output_location`: `dist`
-   - Secret necessária no GitHub: `AZURE_STATIC_WEB_APPS_API_TOKEN_HOST`
-   - Variável de Ambiente / Build: `REMOTE_URL` (apontando para a URL pública do `remoteEntry.js` no Azure, ex: `https://<seu-remote>.azurestaticapps.net/remoteEntry.js`).
-
-### 🌐 URLs Públicas (Azure)
-
-- **Host Application URL**: [https://nexora-host-fernando.azurewebsites.net](https://nexora-host-fernando.azurewebsites.net)
-- **Remote Application URL**: [https://nexora-remote-fernando.azurewebsites.net](https://nexora-remote-fernando.azurewebsites.net)
-

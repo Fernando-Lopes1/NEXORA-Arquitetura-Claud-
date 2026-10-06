@@ -1,10 +1,10 @@
 import React, { useState, Suspense } from 'react';
 
-// Importações dinâmicas dos componentes remotos do MFE Remote via Module Federation
+// Importações dinâmicas dos 2 Micro-Frontends Remotos via Webpack Module Federation
 const RemoteOrderForm = React.lazy(() => import('remote/OrderForm'));
-const RemoteDashboard = React.lazy(() => import('remote/Dashboard'));
+const RemoteDashboard = React.lazy(() => import('remoteDashboard/Dashboard'));
 
-// Componente Error Boundary para resiliência caso o Remote esteja indisponível
+// Componente Error Boundary para resiliência caso algum Remote esteja indisponível
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -16,16 +16,16 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Erro ao carregar o MFE Remote:', error, errorInfo);
+    console.error('Erro ao carregar MFE Remoto:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <div style={styles.errorContainer}>
-          <h3 style={styles.errorTitle}>⚠️ Erro ao carregar o Micro-Frontend Remoto</h3>
+          <h3 style={styles.errorTitle}>⚠️ Erro ao carregar Micro-Frontend Remoto</h3>
           <p style={styles.errorDesc}>
-            Não foi possível conectar ao MFE Remote. Verifique se a aplicação remota está ativa e com CORS configurado.
+            Não foi possível conectar ao serviço remoto. Verifique se as instâncias do Azure estão ativas.
           </p>
           <button
             onClick={() => this.setState({ hasError: false })}
@@ -41,7 +41,7 @@ class ErrorBoundary extends React.Component {
 }
 
 const App = () => {
-  // Estado centralizado de Ordens de Serviço no Host
+  // Estado centralizado de Ordens de Serviço no Host Shell
   const [orders, setOrders] = useState([
     {
       id: 'OS-1001',
@@ -78,7 +78,7 @@ const App = () => {
   // Controle da aba ativa no Host Container
   const [activeTab, setActiveTab] = useState('dashboard');
 
-  // Callback para receber novas OS enviadas pelo MFE Remote OrderForm
+  // Callback para receber novas OS criadas no MFE Remote 1 (OrderForm)
   const handleAddOrder = (newOrder) => {
     setOrders((prevOrders) => [newOrder, ...prevOrders]);
   };
@@ -161,7 +161,7 @@ const App = () => {
               ...(activeTab === 'dashboard' ? styles.activeNavTab : {}),
             }}
           >
-            📊 MFE Dashboard & Analytics
+            📊 MFE 2: Dashboard & Analytics (Azure URL 2)
           </button>
           <button
             onClick={() => setActiveTab('orders')}
@@ -170,7 +170,7 @@ const App = () => {
               ...(activeTab === 'orders' ? styles.activeNavTab : {}),
             }}
           >
-            📋 MFE Abertura & Gestão de OS
+            📋 MFE 1: Ordens de Serviço (Azure URL 1)
           </button>
         </div>
       </div>
@@ -184,7 +184,7 @@ const App = () => {
                 fallback={
                   <div style={styles.loadingBox}>
                     <div style={styles.spinner}></div>
-                    <span>Carregando MFE Dashboard Remoto (remote/Dashboard)...</span>
+                    <span>Carregando MFE 2 Remoto (remoteDashboard/Dashboard)...</span>
                   </div>
                 }
               >
@@ -196,14 +196,14 @@ const App = () => {
 
         {activeTab === 'orders' && (
           <>
-            {/* Componente Remoto (OrderForm) via Webpack Module Federation */}
+            {/* Componente Remoto 1 (OrderForm) via Webpack Module Federation */}
             <section style={styles.section}>
               <ErrorBoundary>
                 <Suspense
                   fallback={
                     <div style={styles.loadingBox}>
                       <div style={styles.spinner}></div>
-                      <span>Carregando MFE Formulário Remoto (remote/OrderForm)...</span>
+                      <span>Carregando MFE 1 Remoto (remote/OrderForm)...</span>
                     </div>
                   }
                 >
@@ -212,7 +212,7 @@ const App = () => {
               </ErrorBoundary>
             </section>
 
-            {/* Painel e Tabela de Controle de Ordens de Serviço (Host) */}
+            {/* Painel e Tabela de Controle no Host Container */}
             <section style={styles.section}>
               <div style={styles.tableCard}>
                 <div style={styles.tableHeader}>
