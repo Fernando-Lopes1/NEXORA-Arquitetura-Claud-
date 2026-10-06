@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import Dashboard from './components/Dashboard';
+import OrderList from './components/OrderList';
 
 const App = () => {
-  const [standaloneOrders] = useState([
+  const [orders, setOrders] = useState([
     {
       id: 'OS-1001',
       cliente: 'Hospital Central São Lucas',
@@ -35,18 +35,36 @@ const App = () => {
     },
   ]);
 
+  const handleCompleteOrder = (id) => {
+    setOrders((prev) =>
+      prev.map((ord) =>
+        ord.id === id ? { ...ord, situacao: 'Concluída' } : ord
+      )
+    );
+  };
+
+  const handleDeleteOrder = (id) => {
+    if (window.confirm(`Deseja remover a Ordem de Serviço ${id}?`)) {
+      setOrders((prev) => prev.filter((ord) => ord.id !== id));
+    }
+  };
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
         <div>
-          <h1 style={styles.headerTitle}>NEXORA Remote 3 - Dashboard MFE</h1>
-          <p style={styles.headerSubtitle}>Micro-Frontend 3 Independente</p>
+          <h1 style={styles.headerTitle}>NEXORA Remote 2 - OrderList MFE</h1>
+          <p style={styles.headerSubtitle}>Micro-Frontend 2 Independente</p>
         </div>
-        <span style={styles.headerBadge}>Porta 3003 - Autônomo</span>
+        <span style={styles.headerBadge}>Porta 3002 - Autônomo</span>
       </header>
 
       <main style={styles.main}>
-        <Dashboard orders={standaloneOrders} />
+        <OrderList
+          orders={orders}
+          onCompleteOrder={handleCompleteOrder}
+          onDeleteOrder={handleDeleteOrder}
+        />
       </main>
     </div>
   );
@@ -88,7 +106,7 @@ const styles = {
     fontWeight: '600',
   },
   main: {
-    maxWidth: '1000px',
+    maxWidth: '1100px',
     margin: '0 auto',
   },
 };

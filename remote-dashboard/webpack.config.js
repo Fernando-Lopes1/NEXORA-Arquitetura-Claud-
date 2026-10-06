@@ -8,7 +8,7 @@ module.exports = (env, argv) => {
     entry: './src/index.js',
     mode: argv.mode || 'development',
     devServer: {
-      port: 3002,
+      port: 3003,
       historyApiFallback: true,
       headers: {
         'Access-Control-Allow-Origin': '*',
