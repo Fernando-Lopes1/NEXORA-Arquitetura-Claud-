@@ -123,9 +123,8 @@ O projeto está preparado para deploy automatizado através do GitHub Actions em
    - Secret necessária no GitHub: `AZURE_STATIC_WEB_APPS_API_TOKEN_HOST`
    - Variável de Ambiente / Build: `REMOTE_URL` (apontando para a URL pública do `remoteEntry.js` no Azure, ex: `https://<seu-remote>.azurestaticapps.net/remoteEntry.js`).
 
-### 🌐 URLs Públicas (Azure Static Web Apps)
+### 🌐 URLs Públicas (Azure)
 
-> **Observação:** Espaço reservado para as URLs geradas após a criação das instâncias no portal do Azure:
+- **Host Application URL**: [https://nexora-host-fernando.azurewebsites.net](https://nexora-host-fernando.azurewebsites.net)
+- **Remote Application URL**: [https://nexora-remote-fernando.azurewebsites.net](https://nexora-remote-fernando.azurewebsites.net)
 
-- **Host Application URL**: `https://<subdominio-host>.azurestaticapps.net` *(substituir após a criação)*
-- **Remote Application URL**: `https://<subdominio-remote>.azurestaticapps.net` *(substituir após a criação)*
