@@ -82,12 +82,3 @@ cd host-dashboard && npm install && npm run dev
 
 ---
 
-## 💻 Comandos CLI do Azure para Implantação dos 2 Novos Links (Par 2)
-
-```bash
-# 1. Criar Remote 2 no Azure (Dashboard MFE)
-az webapp create --resource-group rg-nexora-ca --plan nexora-plan --name nexora-remote-dashboard-fernando --runtime "NODE:22-lts"
-
-# 2. Criar Host 2 no Azure (Dashboard Shell)
-az webapp create --resource-group rg-nexora-ca --plan nexora-plan --name nexora-host-dashboard-fernando --runtime "NODE:22-lts"
-```
