@@ -5,7 +5,8 @@ const path = require('path');
 const deps = require('./package.json').dependencies;
 
 module.exports = (env, argv) => {
-  const remoteUrl = process.env.REMOTE_URL || 'http://localhost:3001/remoteEntry.js';
+  const isProd = argv.mode === 'production';
+  const remoteUrl = process.env.REMOTE_URL || (isProd ? '/remote/remoteEntry.js' : 'http://localhost:3001/remoteEntry.js');
   return {
     entry: './src/index.js',
     mode: argv.mode || 'development',

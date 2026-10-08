@@ -23,13 +23,16 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Install dependencies and build host-dashboard
-        env:
-          REMOTE_DASHBOARD_URL: https://nexora-remote-dashboard-fernando.azurewebsites.net/remoteEntry.js
+      - name: Install dependencies and build remote & host (Funcionalidade 2)
         run: |
-          cd host-dashboard
+          cd remote-dashboard
           npm install
           npm run build
+          cd ../host-dashboard
+          npm install
+          npm run build
+          mkdir -p dist/remote-dashboard
+          cp -r ../remote-dashboard/dist/* dist/remote-dashboard/
 
       - name: Prepare deployment package
         run: |

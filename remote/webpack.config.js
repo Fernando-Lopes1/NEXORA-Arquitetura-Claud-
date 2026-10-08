@@ -47,6 +47,7 @@ module.exports = (env, argv) => {
         filename: 'remoteEntry.js',
         exposes: {
           './OrderForm': './src/components/OrderForm.jsx',
+          './RemoteApp': './src/App.jsx',
         },
         shared: {
           react: {

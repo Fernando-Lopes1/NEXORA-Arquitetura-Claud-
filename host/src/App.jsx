@@ -1,7 +1,8 @@
 import React, { useState, Suspense } from 'react';
 
-// Importação dinâmica do Remote 1 (OrderForm) via Webpack Module Federation
+// Importação dinâmica do Remote 1 (OrderForm e RemoteApp) via Webpack Module Federation
 const RemoteOrderForm = React.lazy(() => import('remote/OrderForm'));
+const RemoteStandaloneApp = React.lazy(() => import('remote/RemoteApp'));
 
 // Componente Error Boundary para resiliência caso o Remote esteja indisponível
 class ErrorBoundary extends React.Component {
@@ -74,6 +75,9 @@ const App = () => {
     },
   ]);
 
+  // Estado para alternar entre visão Host e visão Remote no mesmo link
+  const [activeTab, setActiveTab] = useState('host'); // 'host' | 'remote'
+
   // Callback para receber novas OS criadas no MFE Remote 1 (OrderForm)
   const handleAddOrder = (newOrder) => {
     setOrders((prevOrders) => [newOrder, ...prevOrders]);
@@ -142,32 +146,87 @@ const App = () => {
         </div>
 
         <div style={styles.navGroupInfo}>
-          <span style={styles.mfeTag}>Host Shell 1 (Porta 3000)</span>
+          <span style={styles.mfeTag}>Funcionalidade 1 (Link Unificado)</span>
           <span style={styles.groupBadge}>Atividade Formativa 13</span>
         </div>
       </header>
 
+      {/* Barra de Abas: Alternância entre Host e Remote no mesmo Link */}
+      <div style={styles.tabNavContainer}>
+        <div style={styles.tabNavWrapper}>
+          <div style={styles.tabButtons}>
+            <button
+              onClick={() => setActiveTab('host')}
+              style={{
+                ...styles.tabBtn,
+                ...(activeTab === 'host' ? styles.tabBtnActive : styles.tabBtnInactive),
+              }}
+            >
+              🏢 Visão Host (Shell Integrado)
+            </button>
+            <button
+              onClick={() => setActiveTab('remote')}
+              style={{
+                ...styles.tabBtn,
+                ...(activeTab === 'remote' ? styles.tabBtnActive : styles.tabBtnInactive),
+              }}
+            >
+              ⚡ Visão Remote (MFE Standalone)
+            </button>
+          </div>
+          <div style={styles.unificationBadge}>
+            🔗 <strong>Link Único:</strong> Host & Remote unificados nesta URL
+          </div>
+        </div>
+      </div>
+
       {/* Main Content Area */}
       <main style={styles.mainContent}>
-        {/* Componente Remoto 1 (OrderForm) via Webpack Module Federation */}
-        <section style={styles.section}>
-          <ErrorBoundary>
-            <Suspense
-              fallback={
-                <div style={styles.loadingBox}>
-                  <div style={styles.spinner}></div>
-                  <span>Carregando MFE 1 Remoto (remote/OrderForm)...</span>
-                </div>
-              }
-            >
-              <RemoteOrderForm onAddOrder={handleAddOrder} />
-            </Suspense>
-          </ErrorBoundary>
-        </section>
+        {activeTab === 'remote' ? (
+          /* Visão Remota Autônoma (Standalone) */
+          <section style={styles.section}>
+            <div style={styles.remoteWrapperCard}>
+              <div style={styles.remoteBanner}>
+                <span>
+                  ⚡ <strong>Modo Remote Standalone:</strong> Visualizando o Micro-Frontend Remoto 1 isolado, carregado dinamicamente via Webpack Module Federation dentro do mesmo domínio.
+                </span>
+              </div>
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div style={styles.loadingBox}>
+                      <div style={styles.spinner}></div>
+                      <span>Carregando Remote 1 Standalone...</span>
+                    </div>
+                  }
+                >
+                  <RemoteStandaloneApp />
+                </Suspense>
+              </ErrorBoundary>
+            </div>
+          </section>
+        ) : (
+          /* Visão Host Integrada */
+          <>
+            {/* Componente Remoto 1 (OrderForm) via Webpack Module Federation */}
+            <section style={styles.section}>
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <div style={styles.loadingBox}>
+                      <div style={styles.spinner}></div>
+                      <span>Carregando MFE 1 Remoto (remote/OrderForm)...</span>
+                    </div>
+                  }
+                >
+                  <RemoteOrderForm onAddOrder={handleAddOrder} />
+                </Suspense>
+              </ErrorBoundary>
+            </section>
 
-        {/* Painel e Tabela de Controle no Host Container */}
-        <section style={styles.section}>
-          <div style={styles.tableCard}>
+            {/* Painel e Tabela de Controle no Host Container */}
+            <section style={styles.section}>
+              <div style={styles.tableCard}>
             <div style={styles.tableHeader}>
               <div>
                 <h2 style={styles.tableTitle}>Painel Geral de Ordens de Serviço</h2>
@@ -263,6 +322,8 @@ const App = () => {
             </div>
           </div>
         </section>
+          </>
+        )}
       </main>
 
       {/* Rodapé do ERP NEXORA */}
@@ -304,6 +365,67 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     boxShadow: '0 4px 10px rgba(6, 38, 95, 0.15)',
+  },
+  tabNavContainer: {
+    backgroundColor: '#FFFFFF',
+    borderBottom: '1px solid #E2E8F0',
+    padding: '12px 32px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+  },
+  tabNavWrapper: {
+    maxWidth: '1240px',
+    margin: '0 auto',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '12px',
+  },
+  tabButtons: {
+    display: 'flex',
+    gap: '10px',
+  },
+  tabBtn: {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'all 0.2s ease',
+  },
+  tabBtnActive: {
+    backgroundColor: '#0B5FD7',
+    color: '#FFFFFF',
+    boxShadow: '0 2px 8px rgba(11, 95, 215, 0.25)',
+  },
+  tabBtnInactive: {
+    backgroundColor: '#F1F5F9',
+    color: '#475569',
+  },
+  unificationBadge: {
+    fontSize: '12px',
+    color: '#0369A1',
+    backgroundColor: '#E0F2FE',
+    padding: '6px 14px',
+    borderRadius: '20px',
+    border: '1px solid #BAE6FD',
+  },
+  remoteWrapperCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: '12px',
+    padding: '24px',
+    border: '1px solid #E2E8F0',
+    boxShadow: '0 4px 12px rgba(6, 38, 95, 0.05)',
+  },
+  remoteBanner: {
+    backgroundColor: '#EFF6FF',
+    color: '#1E40AF',
+    padding: '14px 18px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    marginBottom: '20px',
+    border: '1px solid #BFDBFE',
   },
   navBrandContainer: {
     display: 'flex',

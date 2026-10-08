@@ -5,8 +5,10 @@ const path = require('path');
 const deps = require('./package.json').dependencies;
 
 module.exports = (env, argv) => {
+  const isProd = argv.mode === 'production';
   const remoteDashboardUrl =
-    process.env.REMOTE_DASHBOARD_URL || 'http://localhost:3002/remoteEntry.js';
+    process.env.REMOTE_DASHBOARD_URL ||
+    (isProd ? '/remote-dashboard/remoteEntry.js' : 'http://localhost:3002/remoteEntry.js');
 
   return {
     entry: './src/index.js',

@@ -23,13 +23,16 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Install dependencies and build host
-        env:
-          REMOTE_URL: https://nexora-remote-fernando.azurewebsites.net/remoteEntry.js
+      - name: Install dependencies and build remote & host (Funcionalidade 1)
         run: |
-          cd host
+          cd remote
           npm install
           npm run build
+          cd ../host
+          npm install
+          npm run build
+          mkdir -p dist/remote
+          cp -r ../remote/dist/* dist/remote/
 
       - name: Prepare deployment package
         run: |
