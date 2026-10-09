@@ -1,6 +1,6 @@
-# Integrantes do Grupo - NEXORA (Arquitetura Claud)
+# Integrantes do Grupo - NEXORA (Arquitetura em Nuvem)
 
-**Atividade Formativa 13 - Arquitetura de Micro-Frontends (MFE)**
+**Atividade Formativa - Arquitetura de Microsserviços & Micro-Frontends (MFE)**
 
 - **Éden Samuel**
 - **Fernando Lopes**

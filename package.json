@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "concurrently --kill-others \"npm run dev --prefix remote\" \"npm run dev --prefix host\"",
     "build": "npm run build --prefix remote && npm run build --prefix host",
-    "install:all": "npm install && npm install --prefix remote && npm install --prefix host"
+    "install:all": "npm install && npm install --prefix remote && npm install --prefix host",
+    "services:dev": "concurrently --kill-others -n os,tecnicos -c cyan,yellow \"npm run dev --prefix os-service\" \"npm run dev --prefix tecnicos-service\"",
+    "services:build": "npm run build --prefix os-service && npm run build --prefix tecnicos-service",
+    "services:test": "npm run test --prefix os-service && npm run test --prefix tecnicos-service",
+    "test:all": "npm run services:test && npm run test:crud",
+    "test:crud": "node scripts/test-crud.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
