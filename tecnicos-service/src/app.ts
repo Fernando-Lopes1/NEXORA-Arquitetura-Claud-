@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger/swagger.spec';
 import healthRoutes from './routes/health.routes';
 import tecnicoRoutes from './routes/tecnico.routes';
+import { getTecnicosAppHtml } from './views/appHtml';
 
 const app: Application = express();
 
@@ -19,8 +20,18 @@ app.use(express.urlencoded({ extended: true }));
 // Documentação Swagger UI interativa em /api-docs
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'NEXORA - tecnicos-service Swagger UI',
+  customCss: `
+    .topbar { background-color: #0f172a !important; border-bottom: 2px solid #10b981; }
+    .swagger-ui .info h2 { color: #059669; }
+  `,
   swaggerOptions: { persistAuthorization: true, displayRequestDuration: true }
 }));
+
+// Rota para a aplicação visual completa do CRUD
+app.get('/app', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(getTecnicosAppHtml());
+});
 
 // Rota raiz redireciona para o Swagger UI
 app.get('/', (req: Request, res: Response) => {

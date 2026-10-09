@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './swagger/swagger.spec';
 import healthRoutes from './routes/health.routes';
 import ordemRoutes from './routes/ordem.routes';
+import { getOsAppHtml } from './views/appHtml';
 
 const app: Application = express();
 
@@ -16,11 +17,21 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Documentação Swagger UI interativa em /api-docs
+// Documentação Swagger UI interativa em /api-docs com banner para o Painel Visual
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'NEXORA - os-service Swagger UI',
+  customCss: `
+    .topbar { background-color: #0f172a !important; border-bottom: 2px solid #06b6d4; }
+    .swagger-ui .info h2 { color: #0284c7; }
+  `,
   swaggerOptions: { persistAuthorization: true, displayRequestDuration: true }
 }));
+
+// Rota para a aplicação visual completa do CRUD
+app.get('/app', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(getOsAppHtml());
+});
 
 // Rota raiz redireciona para o Swagger UI
 app.get('/', (req: Request, res: Response) => {

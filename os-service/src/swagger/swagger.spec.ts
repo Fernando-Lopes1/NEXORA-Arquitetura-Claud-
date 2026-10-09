@@ -3,7 +3,7 @@ export const swaggerSpec = {
   info: {
     title: 'NEXORA Field Service - os-service API',
     version: '1.0.0',
-    description: 'Microsserviço autônomo do ERP NEXORA para gerenciamento de Ordens de Serviço (FSM). Implementa o padrão Database-per-Service com persistência PostgreSQL em nuvem e fallback autônomo em SQLite local.'
+    description: '### 🖥️ [👉 CLIQUE AQUI PARA ABRIR A INTERFACE WEB DO CRUD (PAINEL VISUAL)](/app)\n\nMicrosserviço autônomo do ERP NEXORA para gerenciamento de Ordens de Serviço (FSM). Implementa o padrão Database-per-Service com persistência PostgreSQL em nuvem e fallback autônomo em SQLite local.'
   },
   servers: [
     {

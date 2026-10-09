@@ -1,8 +1,12 @@
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 
 // Importação dinâmica do Remote 1 (OrderForm e RemoteApp) via Webpack Module Federation
 const RemoteOrderForm = React.lazy(() => import('remote/OrderForm'));
 const RemoteStandaloneApp = React.lazy(() => import('remote/RemoteApp'));
+
+const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+  ? 'http://localhost:8081' 
+  : 'https://nexora-remote-fernando.azurewebsites.net';
 
 // Componente Error Boundary para resiliência caso o Remote esteja indisponível
 class ErrorBoundary extends React.Component {
@@ -41,10 +45,11 @@ class ErrorBoundary extends React.Component {
 }
 
 const App = () => {
-  // Estado centralizado de Ordens de Serviço no Host Shell 1
+  // Estado de ordens inicial
   const [orders, setOrders] = useState([
     {
       id: 'OS-1001',
+      rawId: 1,
       cliente: 'Hospital Central São Lucas',
       servico: 'Manutenção preventiva em gerador principal',
       tecnico: 'Henrique Ricardo',
@@ -55,6 +60,7 @@ const App = () => {
     },
     {
       id: 'OS-1002',
+      rawId: 2,
       cliente: 'Logística TransBrasil S.A.',
       servico: 'Instalação de rastreadores em frota de caminhões',
       tecnico: 'Felipe Carneiro',
@@ -65,6 +71,7 @@ const App = () => {
     },
     {
       id: 'OS-1003',
+      rawId: 3,
       cliente: 'Escola Técnica Politécnica',
       servico: 'Substituição de switch de rede principal',
       tecnico: 'Não atribuído',
@@ -75,27 +82,98 @@ const App = () => {
     },
   ]);
 
-  // Estado para alternar entre visão Host e visão Remote no mesmo link
   const [activeTab, setActiveTab] = useState('host'); // 'host' | 'remote'
+  const [backendOnline, setBackendOnline] = useState(false);
+
+  // Carrega ordens reais do microsserviço os-service
+  const fetchOrdersFromApi = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/ordens`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setOrders(data.map((d) => ({
+            id: 'OS-' + d.id,
+            rawId: d.id,
+            cliente: d.cliente,
+            servico: d.descricao_servico,
+            tecnico: d.tecnico || 'Não atribuído',
+            prioridade: d.prioridade,
+            situacao: d.status,
+            valorEstimado: d.valor_estimado ? Number(d.valor_estimado).toFixed(2) : '0.00',
+            dataCriacao: d.data_abertura ? new Date(d.data_abertura).toLocaleDateString('pt-BR') : 'Hoje',
+          })));
+        }
+        setBackendOnline(true);
+      }
+    } catch (e) {
+      console.log('os-service offline ou inacessível, operando com dados locais');
+      setBackendOnline(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrdersFromApi();
+  }, []);
 
   // Callback para receber novas OS criadas no MFE Remote 1 (OrderForm)
-  const handleAddOrder = (newOrder) => {
+  const handleAddOrder = async (newOrder) => {
     setOrders((prevOrders) => [newOrder, ...prevOrders]);
+
+    try {
+      await fetch(`${API_BASE_URL}/api/ordens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cliente: newOrder.cliente,
+          descricao_servico: newOrder.servico,
+          tecnico: newOrder.tecnico !== 'Não atribuído' ? newOrder.tecnico : undefined,
+          prioridade: newOrder.prioridade,
+          status: newOrder.situacao,
+          valor_estimado: parseFloat(newOrder.valorEstimado) || 0,
+        }),
+      });
+      fetchOrdersFromApi();
+    } catch (e) {
+      console.log('Salvo localmente');
+    }
   };
 
   // Concluir ordem de serviço
-  const handleCompleteOrder = (id) => {
+  const handleCompleteOrder = async (id, rawId) => {
     setOrders((prev) =>
       prev.map((ord) =>
         ord.id === id ? { ...ord, situacao: 'Concluída' } : ord
       )
     );
+
+    const targetId = rawId || parseInt(id.replace(/\D/g, ''), 10);
+    if (targetId) {
+      try {
+        await fetch(`${API_BASE_URL}/api/ordens/${targetId}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Concluída' }),
+        });
+      } catch (e) {
+        console.log('Atualizado localmente');
+      }
+    }
   };
 
   // Excluir ordem de serviço
-  const handleDeleteOrder = (id) => {
+  const handleDeleteOrder = async (id, rawId) => {
     if (window.confirm(`Deseja realmente remover a Ordem de Serviço ${id}?`)) {
       setOrders((prev) => prev.filter((ord) => ord.id !== id));
+
+      const targetId = rawId || parseInt(id.replace(/\D/g, ''), 10);
+      if (targetId) {
+        try {
+          await fetch(`${API_BASE_URL}/api/ordens/${targetId}`, { method: 'DELETE' });
+        } catch (e) {
+          console.log('Removido localmente');
+        }
+      }
     }
   };
 
@@ -146,8 +224,39 @@ const App = () => {
         </div>
 
         <div style={styles.navGroupInfo}>
-          <span style={styles.mfeTag}>Funcionalidade 1 (Link Unificado)</span>
-          <span style={styles.groupBadge}>Atividade Formativa 13</span>
+          <span style={{
+            padding: '6px 12px',
+            borderRadius: '9999px',
+            fontSize: '12px',
+            fontWeight: '600',
+            backgroundColor: backendOnline ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            color: backendOnline ? '#10b981' : '#ef4444',
+            border: backendOnline ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}>
+            {backendOnline ? '🟢 os-service :8081 Conectado' : '🟠 Modo Fallback Local'}
+          </span>
+          <a
+            href="https://nexora-remote-fernando.azurewebsites.net/api-docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '6px 12px',
+              backgroundColor: '#0284c7',
+              color: '#fff',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: '600',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            📖 Swagger API (:8081)
+          </a>
         </div>
       </header>
 
