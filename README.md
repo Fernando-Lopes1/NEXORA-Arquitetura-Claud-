@@ -1,13 +1,10 @@
-# NEXORA — Field Service ERP (Microsserviços & Micro-Frontends)
+# NEXORA — Field Service ERP (Cloud Architecture, Microsserviços, MFE, Laravel MVC, API Gateway/BFF, SOLID/CQRS & DDD/Saga)
 
-**Atividade Formativa — Arquitetura de Microsserviços e Micro-Frontends em Nuvem**  
-*Disciplina de Arquitetura de Soluções / Arquitetura de Software*
-
-Este repositório contém a implementação completa do ecossistema distribuído do **NEXORA**, um ERP modular para Gestão de Serviços de Campo (*Field Service Management*). O projeto implementa a arquitetura de **Microsserviços com padrão Database-per-Service** no backend e **Micro-Frontends com Webpack Module Federation** no frontend, totalmente integrados e implantados no **Microsoft Azure**.
+Ecossistema corporativo **NEXORA** para Gestão de Serviços de Campo (*Field Service Management*), desenvolvido para a disciplina de **Arquitetura de Soluções em Nuvem**. O repositório consolida de ponta a ponta cinco marcos arquiteturais (**Atividades Formativas 13, 14, 15, 16 e 17**), combinando **Micro-Frontends em React 18 / Webpack 5 Module Federation**, **Microsserviços (`os-service` e `tecnicos-service`) com Database-per-Service**, e a evolução em **PHP 8.3 / Laravel 11** estruturada com **MVC, SOLID, CQRS, API Gateway & BFF, DDD, Event Sourcing e Saga Pattern**.
 
 ---
 
-## 👥 Integrantes do Grupo
+## 👥 Integrantes do Grupo (`GRUPO.md`)
 
 - **Éden Samuel**
 - **Fernando Lopes**
@@ -15,201 +12,160 @@ Este repositório contém a implementação completa do ecossistema distribuído
 - **Henrique Ricardo**
 - **Hugo Takeda**
 
-*Arquivo de referência:* [GRUPO.md](file:///d:/Faculdade/Big%20data/GRUPO.md)
+---
+
+## 📚 Índice de Entregas Acadêmicas (Formativas 13, 14, 15, 16 e 17)
+
+| Atividade | Tema Central | Documentação Detalhada | Principais Artefatos de Código |
+| :--- | :--- | :--- | :--- |
+| **Formativa 13** | Micro-Frontends (2 Pares Host/Remote) no Azure | Seção 2 deste `README.md` | `host/`, `remote/`, `host-dashboard/`, `remote-dashboard/` |
+| **Formativa 14** | Microsserviços (`os-service` e `tecnicos-service`) com Database-per-Service e Swagger | Seção 4 deste `README.md` | `os-service/`, `tecnicos-service/`, `scripts/test-crud.js` |
+| **Formativa 15** | MVC (PHP/Laravel), SOLID, CQRS, CORS & Code Review *FinPay Core* | [`docs/FORMATIVA_15_SOLID_FINPAY_NEXORA.md`](docs/FORMATIVA_15_SOLID_FINPAY_NEXORA.md) | `app/Core/Application/`, `app/Http/Controllers/`, `resources/views/` |
+| **Formativa 16** | API Gateway, BFF, Observabilidade, CORS & Azure CI/CD | [`docs/FORMATIVA_16_GATEWAY_BFF_AZURE.md`](docs/FORMATIVA_16_GATEWAY_BFF_AZURE.md) | `app/Gateway/`, `routes/api.php`, `config/gateway.php`, `.github/workflows/azure-gateway.yml` |
+| **Formativa 17** | EDA, Event Sourcing, Event Catalog, DDD & Saga Pattern | [`docs/FORMATIVA_17_EDA_EVENT_SOURCING_DDD_SAGA.md`](docs/FORMATIVA_17_EDA_EVENT_SOURCING_DDD_SAGA.md) | `app/Core/Domain/`, `app/Core/Infrastructure/EventStore/`, `app/Core/Saga/` |
 
 ---
 
-## 🌐 Links Públicos Oficiais de Produção no Azure (4 Links Ativos)
-
-O ecossistema é servido por **4 aplicações independentes na nuvem do Azure**:
+## 🌐 Links Públicos Oficiais de Produção no Azure (`rg-nexora-ca`)
 
 | Tipo | Aplicação | Link de Produção | Descrição / Interface |
-|---|---|---|---|
-| 🟢 **Frontend MFE 1** | Host Gestão de OS | [https://nexora-host-fernando.azurewebsites.net](https://nexora-host-fernando.azurewebsites.net) | Shell Integrado + Remote MFE de Abertura e Gestão de Ordens de Serviço |
-| 🔵 **Frontend MFE 2** | Host Dashboard BI | [https://nexora-host-dashboard-fernando.azurewebsites.net](https://nexora-host-dashboard-fernando.azurewebsites.net) | Shell Executivo de BI + Remote MFE com KPIs analíticos operacionais |
-| ⚡ **Microsserviço 1** | `os-service` | [https://nexora-remote-fernando.azurewebsites.net](https://nexora-remote-fernando.azurewebsites.net) | CRUD de Ordens de Serviço, ciclo de vida, Swagger UI interativo e Health Check |
-| ⚡ **Microsserviço 2** | `tecnicos-service` | [https://nexora-remote-dashboard-fernando.azurewebsites.net](https://nexora-remote-dashboard-fernando.azurewebsites.net) | CRUD de Técnicos de Campo, disponibilidade, Swagger UI interativo e Health Check |
+| :--- | :--- | :--- | :--- |
+| 🛡️ **API Gateway & BFF** | `nexora-gateway-api` (`:8080`) | [https://nexora-gateway-api.azurewebsites.net](https://nexora-gateway-api.azurewebsites.net) | Ponto Único de Entrada (Fase 2), Reverse Proxy, Agregação BFF (`/api/bff/status`, `/api/bff/dashboard`, `/api/bff/ordens/{id}`), Painel MVC Blade e Orquestrador Saga |
+| 🟢 **Frontend MFE 1** | Host Gestão de OS (`:3000`) | [https://nexora-host-fernando.azurewebsites.net](https://nexora-host-fernando.azurewebsites.net) | Shell Integrado + Remote MFE de Abertura e Gestão de Ordens de Serviço |
+| 🔵 **Frontend MFE 2** | Host Dashboard BI (`:3004`) | [https://nexora-host-dashboard-fernando.azurewebsites.net](https://nexora-host-dashboard-fernando.azurewebsites.net) | Shell Executivo de BI + Remote MFE com KPIs analíticos operacionais |
+| ⚡ **Microsserviço 1 / Remote 1** | `os-service` (`:8081` / `:3001`) | [https://nexora-remote-fernando.azurewebsites.net](https://nexora-remote-fernando.azurewebsites.net) | CRUD de Ordens de Serviço, ciclo de vida, Swagger UI interativo (`/api-docs`) e Health Check (`/health`) |
+| ⚡ **Microsserviço 2 / Remote 2** | `tecnicos-service` (`:8082` / `:3002`) | [https://nexora-remote-dashboard-fernando.azurewebsites.net](https://nexora-remote-dashboard-fernando.azurewebsites.net) | CRUD de Técnicos de Campo, disponibilidade, Swagger UI interativo (`/api-docs`) e Health Check (`/health`) |
 
 ---
 
-## 🏗️ Visão Geral da Arquitetura Distribuída
+## 🏗️ Evolução Arquitetural: Fase 1 vs Fase 2 (API Gateway & BFF)
 
-A solução implementa a decomposição canônica em **Bounded Contexts (DDD)** e isolamento físico de persistência via **Database-per-Service**:
+```mermaid
+flowchart TB
+    subgraph ClientLayer["Camada de Apresentação (Micro-Frontends & Views MVC)"]
+        MFE1["Host 1 (:3000) + Remote 1 (:3001)"]
+        MFE2["Host 2 (:3004) + Remote 2 (:3002)"]
+        BLADE["Painel Web Laravel Blade MVC (/ordens, /dashboard)"]
+    end
 
-```text
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                                 CAMADA DE APRESENTAÇÃO                                 │
-│                                                                                        │
-│     Shell Host OS (Porta :3000)                   Shell Host Dashboard (Porta :3004)   │
-│   ┌─────────────────────────────┐               ┌──────────────────────────────────┐   │
-│   │   OrderForm MFE (:3001)     │               │     Dashboard MFE (:3002)        │   │
-│   └──────────────┬──────────────┘               └─────────────────┬────────────────┘   │
-└──────────────────┼────────────────────────────────────────────────┼────────────────────┘
-                   │                                                │
-   HTTP /api/ordens│                                                │ HTTP /api/tecnicos
-     (Porta :8081) │                                                │ (Porta :8082)
-                   ▼                                                ▼
-┌───────────────────────────────────────┐      ┌────────────────────────────────────────┐
-│              os-service               │      │            tecnicos-service            │
-│         localhost:8081 (Azure)        │      │         localhost:8082 (Azure)         │
-│                                       │      │                                        │
-│  • CRUD completo de Ordens de Serviço │      │  • CRUD completo de Técnicos de Campo  │
-│  • Validação de ciclo de vida (status)│      │  • Gestão de especialidades e regiões  │
-│  • Regras de prioridade e valores     │      │  • Controle de disponibilidade         │
-│  • Documentação OpenAPI / Swagger UI  │      │  • Documentação OpenAPI / Swagger UI   │
-│  • Health check (/health)             │      │  • Health check (/health)              │
-│                                       │      │                                        │
-│   ┌───────────────────────────────┐   │      │   ┌────────────────────────────────┐   │
-│   │   Banco SQLite / PostgreSQL   │   │      │   │   Banco SQLite / PostgreSQL    │   │
-│   │        data/os.sqlite         │   │      │   │      data/tecnicos.sqlite      │   │
-│   └───────────────────────────────┘   │      │   └────────────────────────────────┘   │
-│        (Database per Service)         │      │         (Database per Service)         │
-└───────────────────────────────────────┘      └────────────────────────────────────────┘
+    subgraph PerimeterLayer["Camada de Perímetro — API Gateway & BFF (:8080)"]
+        MW["Global Middlewares:\n- CentralizedCorsMiddleware\n- CorrelationIdMiddleware (X-Correlation-Id)\n- GatewayObservabilityMiddleware (X-Gateway-*)"]
+        BFF["BFF Layer (/api/bff/**)\nAgregação de Dashboard & Composição de OS"]
+        PROXY["Reverse Proxy (/api/ordens/**, /api/alocacoes/**)"]
+    end
+
+    subgraph CoreLayer["Domínios de Negócio & Persistência (SOLID, CQRS, DDD, Event Sourcing & Saga)"]
+        CQRS["CQRS Command Bus & Query Bus\n(app/Core/Application)"]
+        DDD["DDD Bounded Contexts, Aggregates & ACL\n(app/Core/Domain)"]
+        SAGA["Orquestrador Saga & Compensações\n(app/Core/Saga)"]
+        MS1["os-service (:8081) + tecnicos-service (:8082)"]
+        ES[("SQLite Database + Immutable Event Store\n(ordens_servico, tecnicos, event_store)")]
+    end
+
+    MFE1 & MFE2 -->|"HTTP REST (:8080)"| MW
+    MW --> BFF & PROXY
+    BLADE --> CQRS
+    BFF & PROXY --> CQRS & DDD & SAGA & MS1
+    CQRS & DDD & SAGA --> ES
 ```
 
----
-
-## 📐 Padrões Arquiteturais Implementados
-
-| Padrão | Onde é Aplicado | Benefício Técnico & Conceito Didático |
-|---|---|---|
-| **Database per Service** | `os-service` e `tecnicos-service` | Cada microsserviço gerencia seu próprio banco de dados relacional. Não há tabelas compartilhadas nem Foreign Keys diretas entre serviços, garantindo autonomia absoluta e desacoplamento. |
-| **Domain-Driven Design (Bounded Contexts)** | Separação OS vs Técnicos | O domínio de ciclo de vida de atendimentos/OS é estritamente delimitado e independente da gestão de recursos humanos e disponibilidade técnica. |
-| **Comunicação REST Padronizada** | Clientes & MFE ➔ APIs | Contratos RESTful com verbos semânticos (GET, POST, PUT, DELETE, PATCH), paginação, filtros e códigos HTTP canônicos (200, 201, 400, 404). |
-| **Documentação OpenAPI & Swagger** | `/api-docs` em cada serviço | Documentação viva, interativa e executável diretamente no navegador web. |
-| **Observabilidade e Health Checks** | `/health` em cada serviço | Endpoint de monitoramento contínuo para diagnóstico de status (`UP`) e conectividade com a camada de dados. |
-| **Tolerância a Falhas & Resiliência** | Isolamento de Microsserviços | A queda completa do `os-service` não compromete a execução, leitura ou escrita no `tecnicos-service`, e vice-versa. |
-
----
-
-## 🗺️ Mapa de Portas e Endpoints REST
-
-### 1. `os-service` — Porta `8081` (Local) / Azure `nexora-remote-fernando`
-- **Swagger UI:** [http://localhost:8081/api-docs](http://localhost:8081/api-docs) ou [https://nexora-remote-fernando.azurewebsites.net/api-docs](https://nexora-remote-fernando.azurewebsites.net/api-docs)
-- **OpenAPI Spec JSON:** `GET /api-docs.json`
-- **Health Check:** `GET /health` (Retorna status `UP` e status do banco de dados)
-- **Rotas CRUD:**
-  - `GET /api/ordens`: Lista ordens (suporta filtros `?status=Aberta`, `?prioridade=Alta`, `?cliente=Hospital`)
-  - `GET /api/ordens/:id`: Detalha uma OS por ID numérico
-  - `POST /api/ordens`: Cadastra nova OS com validação de campos obrigatórios e formato
-  - `PUT /api/ordens/:id`: Atualização completa de dados cadastrais
-  - `PATCH /api/ordens/:id/status`: Transição de status da OS (`Aberta` ➔ `Agendada` ➔ `Em Execução` ➔ `Concluída` / `Cancelada`) com guarda de técnico obrigatório
-  - `DELETE /api/ordens/:id`: Remove ou cancela uma OS existente
-
-### 2. `tecnicos-service` — Porta `8082` (Local) / Azure `nexora-remote-dashboard-fernando`
-- **Swagger UI:** [http://localhost:8082/api-docs](http://localhost:8082/api-docs) ou [https://nexora-remote-dashboard-fernando.azurewebsites.net/api-docs](https://nexora-remote-dashboard-fernando.azurewebsites.net/api-docs)
-- **OpenAPI Spec JSON:** `GET /api-docs.json`
-- **Health Check:** `GET /health` (Retorna status `UP` e status do banco de dados)
-- **Rotas CRUD:**
-  - `GET /api/tecnicos`: Lista técnicos (suporta filtros `?especialidade=Climatização`, `?status=Disponível`, `?regiao=Centro`)
-  - `GET /api/tecnicos/:id`: Detalha informações completas do técnico
-  - `POST /api/tecnicos`: Cadastra novo técnico de campo com validações
-  - `PUT /api/tecnicos/:id`: Atualiza dados de contato, região e especialidade
-  - `PATCH /api/tecnicos/:id/disponibilidade`: Atualiza disponibilidade (`Disponível`, `Em Atendimento`, `Ausente`)
-  - `DELETE /api/tecnicos/:id`: Exclui técnico da base
-
----
-
-## 🚀 Como Executar Localmente
-
-### Opção 1: Inicialização Automática Conjunta (Recomendado)
-
-Inicia ambos os microsserviços simultaneamente em terminais separados:
-
-**No Windows PowerShell:**
-```powershell
-.\start-all.ps1
-```
-
-**No Prompt de Comando (CMD) ou clique duplo:**
-```cmd
-.\start-all.bat
-```
-
-Dois terminais serão abertos exibindo o log de inicialização e o link do Swagger UI em:
-- `http://localhost:8081/api-docs` (os-service)
-- `http://localhost:8082/api-docs` (tecnicos-service)
-
----
-
-### Opção 2: Inicialização via NPM
-
-```bash
-# Na raiz do projeto:
-npm run services:dev
-```
-
----
-
-## 🧪 Como Rodar os Testes Automatizados
-
-A solução conta com **duas camadas de testes automatizados**:
-
-### 1. Testes de Unidade e Domínio dos Microsserviços (68 testes)
-```bash
-npm run services:test
-```
-- **`os-service`**: 33 testes cobrindo CRUD, ciclo de vida, validações e erros 400/404.
-- **`tecnicos-service`**: 35 testes cobrindo CRUD, disponibilidade, validações e erros 400/404.
-
-### 2. Suíte Integrada End-to-End (46 testes)
-```bash
-npm run test:crud
-```
-O executor automatizado (`scripts/test-crud.js`):
-1. Detecta ou sobe automaticamente os microsserviços nas portas 8081 e 8082.
-2. Executa todas as operações CRUD reais com requisições HTTP via Fetch.
-3. Valida os códigos `200 OK`, `201 Created`, `400 Bad Request` e `404 Not Found`.
-4. Encerra os processos de teste de forma limpa.
-
----
-
-## ☁️ Esteiras de CI/CD no GitHub Actions
-
-O repositório possui **4 fluxos automatizados de deploy contínuo** para o Azure App Service:
-
-1. `.github/workflows/main_nexora-host-fernando.yml`: Compila e implanta o Shell de Ordens de Serviço (`nexora-host-fernando`).
-2. `.github/workflows/main_nexora-host-dashboard-fernando.yml`: Compila e implanta o Shell de Dashboard BI (`nexora-host-dashboard-fernando`).
-3. `.github/workflows/main_nexora-remote-fernando.yml`: Compila TypeScript e implanta o `os-service` no Azure Web App (`nexora-remote-fernando`).
-4. `.github/workflows/main_nexora-remote-dashboard-fernando.yml`: Compila TypeScript e implanta o `tecnicos-service` no Azure Web App (`nexora-remote-dashboard-fernando`).
+| Critério | Fase 1 — Acesso Direto (Microsserviços Isolados) | Fase 2 — API Gateway & BFF Centralizado (`:8080`) |
+| :--- | :--- | :--- |
+| **Ponto de Acesso do Frontend** | Múltiplos (`:8081`, `:8082`) | **Único (`http://localhost:8080`)** |
+| **Política de CORS** | Espalhada em múltiplos serviços | **Centralizada no `CentralizedCorsMiddleware` e `config/cors.php` do Gateway** |
+| **Impacto de Mudança de Portas** | Quebra o código do Frontend | **Transparente (altera apenas no Gateway)** |
+| **Composição de Telas Complexas** | Múltiplos *requests* pelo browser (*Chatty I/O*) | **1 chamada agregada ao BFF (`/api/bff/dashboard` e `/api/bff/ordens/{id}`)** |
+| **Observabilidade e Rastreabilidade** | Logs isolados sem correlação | **Headers `X-Correlation-Id`, `X-Gateway-Processed-By`, `X-Gateway-Route`, `X-Gateway-Execution-Time-Ms`** |
 
 ---
 
 ## 📁 Estrutura de Diretórios do Projeto
 
 ```text
-NEXORA(Arquitetura Claud)/
-├── os-service/                  # Microsserviço 1 - CRUD Ordens de Serviço (Porta 8081)
-│   ├── src/
-│   │   ├── config/              # Variáveis de ambiente e portas
-│   │   ├── controllers/         # Controladores HTTP REST
-│   │   ├── database/            # Adaptador Database-per-Service (SQLite + Postgres)
-│   │   ├── models/              # Entidades e validações de ciclo de vida
-│   │   ├── routes/              # Definição de rotas da API
-│   │   └── swagger/             # Especificação OpenAPI 3.0
-│   ├── tests/                   # 33 testes automatizados
-│   └── package.json
-├── tecnicos-service/            # Microsserviço 2 - CRUD Técnicos de Campo (Porta 8082)
-│   ├── src/
-│   │   ├── config/              # Configurações do serviço
-│   │   ├── controllers/         # Controladores REST
-│   │   ├── database/            # Adaptador Database-per-Service isolado
-│   │   ├── models/              # Entidades e regras de disponibilidade
-│   │   ├── routes/              # Rotas da API
-│   │   └── swagger/             # Especificação OpenAPI 3.0
-│   ├── tests/                   # 35 testes automatizados
-│   └── package.json
-├── host/                        # Shell Frontend - Funcionalidade 1 (Porta 3000)
-├── remote/                      # Micro-Frontend - Funcionalidade 1 (Porta 3001)
-├── host-dashboard/              # Shell Frontend - Funcionalidade 2 (Porta 3004)
-├── remote-dashboard/            # Micro-Frontend - Funcionalidade 2 (Porta 3002)
-├── scripts/
-│   └── test-crud.js             # Executor E2E de testes automatizados com relatório
-├── .github/
-│   └── workflows/               # 4 esteiras de deploy automatizado no Azure
-├── start-all.ps1                # Script PowerShell para iniciar os microsserviços
-├── start-all.bat                # Script Batch para iniciar os microsserviços
-├── GRUPO.md                     # Identificação dos alunos do grupo
-├── README.md                    # Documentação oficial do projeto
-└── package.json                 # Orquestrador de scripts npm
+NEXORA-Arquitetura-Claud/
+├── app/
+│   ├── Core/
+│   │   ├── Application/          # Formativa 15: CQRS (CommandBus, QueryBus, Commands, Queries, Handlers, Strategies)
+│   │   ├── Domain/               # Formativa 17: DDD (OrdemServicoAggregate, ValueObjects, DomainEvents, ACL)
+│   │   ├── Infrastructure/       # Formativa 15 & 17: EloquentRepository, SqliteEventStore
+│   │   └── Saga/                 # Formativa 17: OrquestradorSagaAberturaOS, Steps & Rollback Compensatório
+│   ├── Gateway/                  # Formativa 16: API Gateway & BFF Layer
+│   │   ├── Controllers/          # BffController, GatewayProxyController
+│   │   ├── Middleware/           # CorrelationIdMiddleware, GatewayObservabilityMiddleware, CentralizedCorsMiddleware
+│   │   └── Services/             # BffService (Agregação Resiliente & Composição Vertical)
+│   ├── Http/Controllers/         # Formativa 15 & 17: OrdemServicoController, DashboardController, SagaAndEventSourcingController
+│   └── Models/                   # Eloquent Models (OrdemServico, Tecnico, ItemServico, EventStoreRecord)
+├── config/
+│   ├── cors.php                  # Configuração de CORS multi-origem
+│   └── gateway.php               # Metadados do API Gateway, rotas ativas e upstreams (:8081, :8082)
+├── database/
+│   ├── migrations/               # Migrations para tecnicos, ordens_servico, itens_servico e event_store
+│   └── seeders/                  # Seeders com dataset oficial NEXORA (OS-1001 a OS-1005 e Técnicos)
+├── docs/
+│   ├── FORMATIVA_15_SOLID_FINPAY_NEXORA.md
+│   ├── FORMATIVA_16_GATEWAY_BFF_AZURE.md
+│   └── FORMATIVA_17_EDA_EVENT_SOURCING_DDD_SAGA.md
+├── os-service/                   # Formativa 14: Microsserviço 1 - CRUD Ordens de Serviço (Porta 8081 + Swagger)
+├── tecnicos-service/             # Formativa 14: Microsserviço 2 - CRUD Técnicos de Campo (Porta 8082 + Swagger)
+├── host/                         # Formativa 13: Host Shell 1 - Gestão de OS (Porta 3000)
+├── remote/                       # Formativa 13: Remote MFE 1 - Formulário de OS (Porta 3001)
+├── host-dashboard/               # Formativa 13: Host Shell 2 - Dashboard Shell (Porta 3004)
+├── remote-dashboard/             # Formativa 13: Remote MFE 2 - Dashboard & KPIs (Porta 3002)
+├── resources/views/              # Formativa 15: Views Blade MVC (Painel de Ordens e Dashboard Executivo)
+├── routes/
+│   ├── web.php                   # Rotas Web MVC
+│   └── api.php                   # Rotas do API Gateway, BFF, Proxy, Saga e Event Store
+├── tests/
+│   ├── Feature/                  # Testes de Integração (Gateway/BFF, MVC/SOLID/CQRS, Saga/EventSourcing)
+│   └── Unit/                     # Testes de Unidade (Value Objects, Aggregates, Pricing Strategies)
+├── .github/workflows/            # Pipelines CI/CD para Azure Web Apps (MFEs + Microsserviços + Gateway PHP 8.3)
+├── GRUPO.md                      # Identificação dos integrantes do grupo e links Azure
+└── README.md                     # Documentação geral do ecossistema NEXORA
+```
+
+---
+
+## 🚀 Como Executar e Testar Localmente
+
+### 1. Backend PHP 8.3 / Laravel 11 (MVC, SOLID, CQRS, API Gateway & BFF, DDD, Event Sourcing e Saga)
+```bash
+# 1. Instalar dependências PHP
+composer install
+
+# 2. Preparar banco SQLite e popular dados iniciais (OS-1001 a OS-1005 e Técnicos)
+touch database/database.sqlite
+php artisan migrate:fresh --seed
+
+# 3. Iniciar o API Gateway & Servidor MVC na porta 8080
+php artisan serve --host=127.0.0.1 --port=8080
+```
+
+### 2. Executar a Suíte de Testes PHPUnit (Formativas 15, 16 e 17 — 22 testes / 239 asserções)
+```bash
+./vendor/bin/phpunit --testdox
+```
+
+### 3. Testar Endpoints do API Gateway & BFF via `curl`
+```bash
+# Status da Arquitetura (Fase 2) + Headers de Observabilidade
+curl -i http://127.0.0.1:8080/api/bff/status
+
+# Dashboard Consolidado via BFF
+curl -s http://127.0.0.1:8080/api/bff/dashboard | jq
+
+# Composição Vertical da Ordem OS-1001 (Ordem + Técnico + SLA + Valorização)
+curl -s http://127.0.0.1:8080/api/bff/ordens/OS-1001 | jq
+
+# Execução da Saga de Abertura de OS com Event Sourcing (Formativa 17)
+curl -X POST http://127.0.0.1:8080/api/saga/ordens \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: trace-nexora-001" \
+  -d '{"cliente":"DataCenter Brasil","servico":"Manutenção de No-Break","prioridade":"Urgente","valor_estimado":3200,"tecnico_id":1}'
+```
+
+### 4. Executar e Testar os Microsserviços Node/TS (`os-service` e `tecnicos-service` — Formativa 14)
+```bash
+npm run services:dev
+npm run services:test
+npm run test:crud
 ```

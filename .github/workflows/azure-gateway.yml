@@ -1,0 +1,96 @@
+# GitHub Actions CI/CD Workflow — NEXORA API Gateway & BFF (Formativa 16)
+# Runs automated PHPUnit test suite (Formativa 15, 16, 17) and deploys to Azure App Service (nexora-gateway-api)
+
+name: Build, Test and Deploy NEXORA API Gateway & BFF to Azure Web App - nexora-gateway-api
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: 'nexora-gateway-api'
+  PHP_VERSION: '8.3'
+
+jobs:
+  build-and-test:
+    name: CI — PHP 8.3 & Laravel Automated Test Suite
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3 Runtime
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, xml, ctype, json, pdo, pdo_sqlite, sqlite3, bcmath
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Prepare Environment & SQLite Database
+        run: |
+          cp -f .env.example .env || true
+          php artisan key:generate --force
+          mkdir -p database
+          touch database/database.sqlite
+          php artisan migrate:fresh --seed --force
+
+      - name: Execute Automated PHPUnit Test Suite (Formativa 15, 16 & 17)
+        run: ./vendor/bin/phpunit
+
+      - name: Package Application Artifact for Azure App Service
+        run: |
+          zip -r nexora-gateway-release.zip . \
+            -x ".git/*" \
+            -x "node_modules/*" \
+            -x "host/*" \
+            -x "remote/*" \
+            -x "host-dashboard/*" \
+            -x "remote-dashboard/*" \
+            -x ".agents/*"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexora-gateway-artifact
+          path: nexora-gateway-release.zip
+
+  deploy-to-azure:
+    name: CD — Deploy Gateway & BFF to Azure Web App (rg-nexora-ca)
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name != 'pull_request' && (vars.ENABLE_AZURE_GATEWAY_DEPLOY == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download Gateway Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: nexora-gateway-artifact
+
+      - name: Login to Azure via OIDC Federated Credentials
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_29389250C50341BD9652463C35B2DB71 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_53766A616C02450D9CE46998C0D8E6C5 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_EA2892E8205C484BA55D62E61F12F0CC }}
+
+      - name: Deploy to Azure Web App (nexora-gateway-api)
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: 'Production'
+          package: nexora-gateway-release.zip
