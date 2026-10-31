@@ -1,0 +1,14 @@
+
+> nexora-tde4-testes-arquitetura@1.0.0 test:backend
+> depcruise --config backend/.dependency-cruiser.cjs ../os-service/src ../tecnicos-service/src
+
+
+✔ no dependency violations found (41 modules, 72 dependencies cruised)
+
+
+> nexora-tde4-testes-arquitetura@1.0.0 test:frontend
+> depcruise --config frontend/.dependency-cruiser.cjs ../host/src ../remote/src ../host-dashboard/src ../remote-dashboard/src
+
+
+✔ no dependency violations found (20 modules, 28 dependencies cruised)
+
