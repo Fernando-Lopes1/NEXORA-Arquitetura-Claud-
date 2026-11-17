@@ -33,9 +33,9 @@ app.get('/app', (req: Request, res: Response) => {
   res.send(getOsAppHtml());
 });
 
-// Rota raiz redireciona para o Swagger UI
+// Rota raiz redireciona para a aplicação visual completa do CRUD
 app.get('/', (req: Request, res: Response) => {
-  res.redirect('/api-docs');
+  res.redirect('/app');
 });
 
 // Endpoint com o contrato bruto OpenAPI JSON

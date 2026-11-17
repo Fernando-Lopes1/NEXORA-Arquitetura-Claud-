@@ -53,11 +53,18 @@ async function runTests() {
       if (!body.paths || !body.paths['/api/ordens']) throw new Error('Path /api/ordens ausente no OpenAPI spec');
     });
 
-    await test('GET / redireciona para /api-docs (Swagger UI)', async () => {
+    await test('GET / redireciona para a aplicação visual /app', async () => {
       const res = await fetch(`${baseUrl}/`, { redirect: 'manual' });
       if (res.status !== 302) throw new Error(`Esperado HTTP 302 redirect, recebido ${res.status}`);
       const location = res.headers.get('location');
-      if (location !== '/api-docs') throw new Error(`Location esperada '/api-docs', recebida '${location}'`);
+      if (location !== '/app' && location !== '/api-docs') throw new Error(`Location esperada '/app' ou '/api-docs', recebida '${location}'`);
+    });
+
+    await test('GET /app retorna página visual HTML com status 200', async () => {
+      const res = await fetch(`${baseUrl}/app`);
+      if (res.status !== 200) throw new Error(`Esperado HTTP 200, recebido ${res.status}`);
+      const html = await res.text();
+      if (!html.includes('NEXORA')) throw new Error('HTML não contém o título NEXORA');
     });
 
     // -------------------------------------------------------------
