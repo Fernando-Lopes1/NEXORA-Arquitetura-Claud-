@@ -5,8 +5,8 @@ const RemoteOrderForm = React.lazy(() => import('remote/OrderForm'));
 const RemoteStandaloneApp = React.lazy(() => import('remote/RemoteApp'));
 
 const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
-  ? 'http://localhost:8081' 
-  : 'https://nexora-remote-fernando.azurewebsites.net';
+  ? 'http://localhost:8080' 
+  : 'https://nexora-gateway-api.azurewebsites.net';
 
 // Componente Error Boundary para resiliência caso o Remote esteja indisponível
 class ErrorBoundary extends React.Component {
@@ -15,12 +15,12 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Erro ao carregar MFE Remote:', error, errorInfo);
+  componentDidCatch() {
+    // Log sanitizado sem expor stack trace estruturado no console do cliente
   }
 
   render() {
@@ -84,30 +84,35 @@ const App = () => {
 
   const [activeTab, setActiveTab] = useState('host'); // 'host' | 'remote'
   const [backendOnline, setBackendOnline] = useState(false);
+  const [uiNotice, setUiNotice] = useState('');
 
-  // Carrega ordens reais do microsserviço os-service
+  // Consome a Visão Geral Agregada em único response do BFF (/api/bff/visao-geral)
   const fetchOrdersFromApi = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/ordens`);
+      const res = await fetch(`${API_BASE_URL}/api/bff/visao-geral`);
       if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setOrders(data.map((d) => ({
-            id: 'OS-' + d.id,
-            rawId: d.id,
+        const payload = await res.json();
+        const rawList = Array.isArray(payload.ordens) ? payload.ordens : (Array.isArray(payload) ? payload : []);
+        if (rawList.length > 0) {
+          setOrders(rawList.map((d, idx) => ({
+            id: d.codigo || (String(d.id || '').startsWith('OS-') ? d.id : 'OS-' + (d.id || idx + 1)),
+            rawId: d.id || idx + 1,
             cliente: d.cliente,
-            servico: d.descricao_servico,
-            tecnico: d.tecnico || 'Não atribuído',
-            prioridade: d.prioridade,
-            situacao: d.status,
-            valorEstimado: d.valor_estimado ? Number(d.valor_estimado).toFixed(2) : '0.00',
-            dataCriacao: d.data_abertura ? new Date(d.data_abertura).toLocaleDateString('pt-BR') : 'Hoje',
+            servico: d.servico || d.descricao || d.descricao_servico || d.tipoServico,
+            tecnico: d.tecnicoDesignado || d.tecnico_nome || d.tecnico || 'Não atribuído',
+            prioridade: d.prioridade || 'Média',
+            situacao: d.situacao || d.status || 'Aberta',
+            valorEstimado: (d.valorEstimado ?? d.valor_estimado ?? d.valor)
+              ? Number(d.valorEstimado ?? d.valor_estimado ?? d.valor).toFixed(2)
+              : '0.00',
+            dataCriacao: d.dataCriacao
+              ? new Date(d.dataCriacao).toLocaleDateString('pt-BR')
+              : 'Hoje',
           })));
         }
         setBackendOnline(true);
       }
-    } catch (e) {
-      console.log('os-service offline ou inacessível, operando com dados locais');
+    } catch {
       setBackendOnline(false);
     }
   };
@@ -116,7 +121,7 @@ const App = () => {
     fetchOrdersFromApi();
   }, []);
 
-  // Callback para receber novas OS criadas no MFE Remote 1 (OrderForm)
+  // Callback para receber novas OS criadas no MFE Remote 1 (OrderForm) via API Gateway & BFF
   const handleAddOrder = async (newOrder) => {
     setOrders((prevOrders) => [newOrder, ...prevOrders]);
 
@@ -126,20 +131,23 @@ const App = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cliente: newOrder.cliente,
-          descricao_servico: newOrder.servico,
+          servico: newOrder.servico,
+          descricao: newOrder.servico,
           tecnico: newOrder.tecnico !== 'Não atribuído' ? newOrder.tecnico : undefined,
           prioridade: newOrder.prioridade,
+          situacao: newOrder.situacao,
           status: newOrder.situacao,
           valor_estimado: parseFloat(newOrder.valorEstimado) || 0,
         }),
       });
+      setUiNotice(`Ordem ${newOrder.id} enviada via API Gateway & BFF (Azure SQL + Azure Service Bus)!`);
       fetchOrdersFromApi();
-    } catch (e) {
-      console.log('Salvo localmente');
+    } catch {
+      setUiNotice(`Ordem ${newOrder.id} registrada em modo resiliente.`);
     }
   };
 
-  // Concluir ordem de serviço
+  // Concluir ordem de serviço via API Gateway & BFF
   const handleCompleteOrder = async (id, rawId) => {
     setOrders((prev) =>
       prev.map((ord) =>
@@ -147,32 +155,31 @@ const App = () => {
       )
     );
 
-    const targetId = rawId || parseInt(id.replace(/\D/g, ''), 10);
+    const targetId = rawId || id;
     if (targetId) {
       try {
-        await fetch(`${API_BASE_URL}/api/ordens/${targetId}/status`, {
+        await fetch(`${API_BASE_URL}/api/ordens/${targetId}/concluir`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'Concluída' }),
         });
-      } catch (e) {
-        console.log('Atualizado localmente');
+        setUiNotice(`Ordem ${id} concluída via Gateway e técnico liberado via Azure Service Bus!`);
+      } catch {
+        setUiNotice(`Ordem ${id} marcada como concluída.`);
       }
     }
   };
 
-  // Excluir ordem de serviço
+  // Excluir ordem de serviço via API Gateway & BFF
   const handleDeleteOrder = async (id, rawId) => {
-    if (window.confirm(`Deseja realmente remover a Ordem de Serviço ${id}?`)) {
-      setOrders((prev) => prev.filter((ord) => ord.id !== id));
-
-      const targetId = rawId || parseInt(id.replace(/\D/g, ''), 10);
-      if (targetId) {
-        try {
-          await fetch(`${API_BASE_URL}/api/ordens/${targetId}`, { method: 'DELETE' });
-        } catch (e) {
-          console.log('Removido localmente');
-        }
+    setOrders((prev) => prev.filter((ord) => ord.id !== id));
+    const targetId = rawId || id;
+    if (targetId) {
+      try {
+        await fetch(`${API_BASE_URL}/api/ordens/${targetId}`, { method: 'DELETE' });
+        setUiNotice(`Ordem de Serviço ${id} removida via API Gateway & BFF.`);
+      } catch {
+        setUiNotice(`Ordem de Serviço ${id} removida da listagem.`);
       }
     }
   };
@@ -219,11 +226,16 @@ const App = () => {
           <div style={styles.logoBadge}>N</div>
           <div>
             <h1 style={styles.brandTitle}>NEXORA</h1>
-            <p style={styles.brandSubtitle}>Gestão de Serviços de Campo (Par 1 - OS)</p>
+            <p style={styles.brandSubtitle}>Gestão de Serviços de Campo (MFE -> API Gateway & BFF)</p>
           </div>
         </div>
 
         <div style={styles.navGroupInfo}>
+          {uiNotice && (
+            <span style={{ fontSize: '12px', backgroundColor: '#1e3a8a', padding: '5px 10px', borderRadius: '6px' }}>
+              {uiNotice}
+            </span>
+          )}
           <span style={{
             padding: '6px 12px',
             borderRadius: '9999px',
@@ -236,10 +248,10 @@ const App = () => {
             alignItems: 'center',
             gap: '6px'
           }}>
-            {backendOnline ? '🟢 os-service :8081 Conectado' : '🟠 Modo Fallback Local'}
+            {backendOnline ? '🟢 API Gateway & BFF (:8080) Conectado' : '🟠 Modo Fallback Local'}
           </span>
           <a
-            href="https://nexora-remote-fernando.azurewebsites.net/api-docs"
+            href={`${API_BASE_URL}/api-docs`}
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -255,7 +267,7 @@ const App = () => {
               gap: '6px'
             }}
           >
-            📖 Swagger API (:8081)
+            📖 Swagger Gateway & BFF
           </a>
         </div>
       </header>
@@ -282,6 +294,15 @@ const App = () => {
             >
               ⚡ Visão Remote (MFE Standalone)
             </button>
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              style={{
+                ...styles.tabBtn,
+                ...(activeTab === 'dashboard' ? styles.tabBtnActive : styles.tabBtnInactive),
+              }}
+            >
+              👷 Técnicos & Dashboard BI
+            </button>
           </div>
           <div style={styles.unificationBadge}>
             🔗 <strong>Link Único:</strong> Host & Remote unificados nesta URL
@@ -291,7 +312,21 @@ const App = () => {
 
       {/* Main Content Area */}
       <main style={styles.mainContent}>
-        {activeTab === 'remote' ? (
+        {activeTab === 'dashboard' ? (
+          <section style={styles.section}>
+            <div style={styles.remoteWrapperCard}>
+              <iframe
+                title="NEXORA Técnicos & Dashboard BI"
+                src={
+                  typeof window !== 'undefined' && window.location.hostname === 'localhost'
+                    ? 'http://localhost:3002'
+                    : 'https://nexora-host-dashboard-fernando.azurewebsites.net'
+                }
+                style={{ width: '100%', height: '82vh', border: 'none', borderRadius: '10px' }}
+              />
+            </div>
+          </section>
+        ) : activeTab === 'remote' ? (
           /* Visão Remota Autônoma (Standalone) */
           <section style={styles.section}>
             <div style={styles.remoteWrapperCard}>

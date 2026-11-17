@@ -5,7 +5,7 @@
 
 ---
 
-## 👥 Integrantes do Grupo
+## 👥 Integrantes do Grupo (`GRUPO.md`)
 
 - **Éden Samuel**
 - **Fernando Lopes**

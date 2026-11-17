@@ -1,0 +1,21 @@
+
+   PASS  TDE4TestesArquitetura\gateway\GatewayArchTest
+  ✓ o Dominio nao depende de Laravel/Illuminate (dominio puro)           2.41s  
+  ✓ o Dominio nao depende das camadas Application e Infrastructure       0.04s  
+  ✓ a Application nao depende de Controllers (Http)                      0.03s  
+  ✓ Controllers nao acessam o banco diretamente (DB facade)              0.01s  
+  ✓ Models nao dependem de Controllers                                   0.03s  
+  ✓ Controllers terminam com o sufixo Controller
+  ✓ Form Requests estendem FormRequest
+  ✓ Handlers terminam com o sufixo Handler                               0.01s  
+  ✓ Commands terminam com o sufixo Command e implementam CommandInterface
+  ✓ Queries terminam com o sufixo Query e implementam QueryInterface
+  ✓ Contratos em Application\Contracts sao interfaces (DIP)
+  ✓ Strategies de preco implementam PricingStrategyInterface (OCP)
+  ✓ Eventos de dominio implementam DomainEventInterface                  0.01s  
+  ✓ nao ha funcoes de debug no codigo                                    0.18s  
+  ✓ arquivos usam strict types no Core                                   0.10s  
+
+  Tests:    15 passed (28 assertions)
+  Duration: 2.95s
+

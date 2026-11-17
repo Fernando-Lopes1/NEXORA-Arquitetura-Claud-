@@ -1,9 +1,23 @@
 # Dependências
 node_modules/
+/vendor/
 
 # Builds e Distribuição
 dist/
 build/
+/bootstrap/cache/*.php
+
+# Storage & Cache Laravel
+/storage/*.key
+/storage/logs/*.log
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*.php
+.phpunit.result.cache
+.phpunit.cache/
+.agents/
+database/*.sqlite
+database/*.sqlite-journal
 
 # Variáveis de Ambiente
 .env
