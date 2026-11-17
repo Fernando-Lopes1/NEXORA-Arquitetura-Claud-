@@ -8,6 +8,6 @@ export interface IDatabaseAdapter {
   exec(sql: string): Promise<void>;
   initSchema(): Promise<void>;
   close(): Promise<void>;
-  getProviderName(): 'PostgreSQL' | 'SQLite';
+  getProviderName(): 'Azure SQL Database' | 'PostgreSQL' | 'SQLite';
   checkConnection(): Promise<boolean>;
 }

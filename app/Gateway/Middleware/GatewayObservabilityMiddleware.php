@@ -61,6 +61,10 @@ class GatewayObservabilityMiddleware
             return 'ordens-service';
         }
 
+        if (str_starts_with($path, '/api/tecnicos')) {
+            return 'tecnicos-service';
+        }
+
         if (str_starts_with($path, '/api/alocacoes') || str_starts_with($path, '/api/dashboard')) {
             return 'alocacoes-service';
         }

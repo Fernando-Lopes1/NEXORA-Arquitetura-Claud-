@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { tecnicoRepository } from '../db/tecnico.repository';
+import { serviceBusConsumer, OrdemBrokerEvent } from '../services/serviceBus.consumer';
 import {
   EspecialidadeTecnico,
   StatusDisponibilidade,
@@ -267,3 +268,66 @@ export async function updateDisponibilidade(req: Request, res: Response): Promis
     res.status(500).json({ erro: `Erro ao atualizar disponibilidade do técnico: ${error.message}` });
   }
 }
+
+/**
+ * GET /api/tecnicos/mensageria/status
+ * Retorna o status do consumidor Azure Service Bus e do banco MongoDB Atlas
+ */
+export async function getMensageriaStatus(_req: Request, res: Response): Promise<void> {
+  try {
+    const dbHealth = await tecnicoRepository.checkHealth();
+    const status = serviceBusConsumer.getStatus();
+    res.status(200).json({
+      servico: 'tecnicos-service',
+      arquitetura: 'Hexagonal (Ports & Adapters)',
+      banco_Alvo: 'MongoDB Atlas (Free Tier)',
+      provedor_ativo: dbHealth.provider,
+      conectado: dbHealth.connected,
+      broker: status.broker,
+      queueOrTopic: status.queueOrTopic,
+      processedCount: status.processedCount,
+      recentEvents: status.recentEvents,
+      mensageria: status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({ erro: `Erro ao consultar status de mensageria: ${error.message}` });
+  }
+}
+
+/**
+ * POST /api/tecnicos/eventos
+ * Processa eventos de Ordem de Serviço vindos do Broker (Azure Service Bus / Bridge)
+ */
+export async function receberEventoBroker(req: Request, res: Response): Promise<void> {
+  try {
+    const body = req.body || {};
+    if (!body.ordemId && !body.tecnicoNome && !body.tecnico && !body.tecnicoId) {
+      res.status(400).json({ erro: 'Evento inválido: informe ordemId e tecnicoNome/tecnicoId.' });
+      return;
+    }
+
+    const event: OrdemBrokerEvent = {
+      eventId: String(body.eventId || `evt-${Date.now()}`),
+      eventType: body.eventType || 'ORDEM_ALOCADA',
+      ordemId: Number(body.ordemId || 1),
+      cliente: String(body.cliente || 'Cliente NEXORA'),
+      statusOrdem: String(body.statusOrdem || body.statusNovo || body.status || 'Agendada'),
+      tecnicoNome: body.tecnicoNome || body.tecnico || null,
+      tecnicoId: body.tecnicoId ? Number(body.tecnicoId) : null,
+      correlationId: String(req.headers['x-correlation-id'] || body.correlationId || ''),
+      timestamp: new Date().toISOString()
+    };
+
+    const processed = await serviceBusConsumer.handleOrdemEvent(event, 'HTTP Broker Bridge');
+    res.status(200).json({
+      processado: true,
+      broker: 'Azure Service Bus',
+      novoStatus: processed.novoStatusDisponibilidade,
+      evento: processed
+    });
+  } catch (error: any) {
+    res.status(500).json({ erro: `Erro ao processar evento do broker: ${error.message}` });
+  }
+}
+

@@ -8,6 +8,6 @@ export interface IDatabaseAdapter {
   exec(sql: string): Promise<void>;
   initSchema(): Promise<void>;
   close(): Promise<void>;
-  getProviderName(): 'PostgreSQL' | 'SQLite';
+  getProviderName(): 'MongoDB Atlas' | 'PostgreSQL' | 'SQLite';
   checkConnection(): Promise<boolean>;
 }

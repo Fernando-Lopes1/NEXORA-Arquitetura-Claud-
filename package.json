@@ -10,6 +10,12 @@
     "services:dev": "concurrently --kill-others -n os,tecnicos -c cyan,yellow \"npm run dev --prefix os-service\" \"npm run dev --prefix tecnicos-service\"",
     "services:build": "npm run build --prefix os-service && npm run build --prefix tecnicos-service",
     "services:test": "npm run test --prefix os-service && npm run test --prefix tecnicos-service",
+    "test:frontend": "node scripts/test-frontend-architecture-and-unit.mjs && npm --prefix TDE4-Testes-Arquitetura run test:frontend",
+    "test:gateway": "./vendor/bin/pest",
+    "test:backend": "npm run services:test && npm --prefix TDE4-Testes-Arquitetura run test:backend",
+    "test:arch": "npm --prefix TDE4-Testes-Arquitetura test",
+    "test:complete": "npm run test:frontend && npm run test:gateway && npm run test:backend",
+    "check:cloud": "node scripts/check-cloud-status.mjs",
     "test:all": "npm run services:test && npm run test:crud",
     "test:crud": "node scripts/test-crud.js"
   },

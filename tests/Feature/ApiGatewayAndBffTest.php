@@ -215,4 +215,119 @@ class ApiGatewayAndBffTest extends TestCase
         $azureOriginResponse->assertStatus(200)
             ->assertHeader('Access-Control-Allow-Origin', 'https://nexora-host-fernando.azurewebsites.net');
     }
+
+    public function test_bff_visao_geral_returns_complete_aggregated_single_response(): void
+    {
+        $response = $this->getJson('/api/bff/visao-geral');
+
+        $response->assertStatus(200)
+            ->assertHeader('X-Gateway-Route', 'bff-service')
+            ->assertHeader('X-Gateway-Processed-By', 'NEXORA-API-Gateway-BFF')
+            ->assertJsonStructure([
+                'agregadoPor',
+                'arquitetura',
+                'fontesConsultadas' => [
+                    'microservico_1_mongo' => ['servico', 'banco', 'dominio', 'status'],
+                    'microservico_2_sql' => ['servico', 'banco', 'dominio', 'status'],
+                    'message_broker' => ['broker', 'fila', 'regraNegocio'],
+                ],
+                'resumoExecutivo',
+                'kpis' => [
+                    'totalOrdens',
+                    'ordensConcluidas',
+                    'ordensEmAndamento',
+                    'ordensAbertas',
+                    'taxaConclusaoPercentual',
+                    'volumeFinanceiroTotal',
+                    'totalTecnicos',
+                    'tecnicosDisponiveis',
+                ],
+                'mensageria' => ['broker', 'fila', 'fluxo'],
+                'ordens',
+                'tecnicos',
+                'timestamp',
+            ]);
+
+        $this->assertGreaterThanOrEqual(5, count($response->json('ordens')));
+        $this->assertGreaterThanOrEqual(5, count($response->json('tecnicos')));
+    }
+
+    public function test_gateway_proxy_tecnicos_crud_lifecycle_and_route_header(): void
+    {
+        // 1. Listar técnicos (GET /api/tecnicos)
+        $listResponse = $this->getJson('/api/tecnicos');
+        $listResponse->assertStatus(200)
+            ->assertHeader('X-Gateway-Route', 'tecnicos-service')
+            ->assertHeader('X-Gateway-Processed-By', 'NEXORA-API-Gateway-BFF');
+        $this->assertGreaterThanOrEqual(5, count($listResponse->json()));
+
+        // 2. Criar técnico (POST /api/tecnicos)
+        $createResponse = $this->postJson('/api/tecnicos', [
+            'nome' => 'Hugo Takeda Cloud',
+            'especialidade' => 'Infraestrutura e Redes',
+            'telefone' => '(11) 97777-8888',
+            'email' => 'hugo.cloud@nexora.com.br',
+            'regiao' => 'São Paulo - Zona Sul',
+            'status' => 'Disponível',
+        ]);
+        $createResponse->assertStatus(201)
+            ->assertHeader('X-Gateway-Route', 'tecnicos-service')
+            ->assertJsonPath('nome', 'Hugo Takeda Cloud')
+            ->assertJsonPath('status', 'Disponível');
+
+        $tecnicoId = $createResponse->json('id');
+        $this->assertNotEmpty($tecnicoId);
+
+        // 3. Detalhar técnico (GET /api/tecnicos/{id})
+        $showResponse = $this->getJson("/api/tecnicos/{$tecnicoId}");
+        $showResponse->assertStatus(200)
+            ->assertHeader('X-Gateway-Route', 'tecnicos-service')
+            ->assertJsonPath('nome', 'Hugo Takeda Cloud');
+
+        // 4. Atualizar técnico (PUT /api/tecnicos/{id})
+        $updateResponse = $this->putJson("/api/tecnicos/{$tecnicoId}", [
+            'especialidade' => 'Climatização Hospitalar',
+            'regiao' => 'São Paulo - Centro',
+        ]);
+        $updateResponse->assertStatus(200)
+            ->assertHeader('X-Gateway-Route', 'tecnicos-service')
+            ->assertJsonPath('especialidade', 'Climatização Hospitalar');
+
+        // 5. Atualizar disponibilidade (PATCH /api/tecnicos/{id}/disponibilidade)
+        $patchResponse = $this->patchJson("/api/tecnicos/{$tecnicoId}/disponibilidade", [
+            'status' => 'Em Atendimento',
+        ]);
+        $patchResponse->assertStatus(200)
+            ->assertHeader('X-Gateway-Route', 'tecnicos-service')
+            ->assertJsonPath('status', 'Em Atendimento')
+            ->assertJsonPath('disponivel', false);
+
+        // 6. Excluir técnico (DELETE /api/tecnicos/{id})
+        $deleteResponse = $this->deleteJson("/api/tecnicos/{$tecnicoId}");
+        $deleteResponse->assertStatus(200)
+            ->assertHeader('X-Gateway-Route', 'tecnicos-service')
+            ->assertJsonPath('removido', true);
+    }
+
+    public function test_gateway_swagger_openapi_json_and_ui_endpoints(): void
+    {
+        $specResponse = $this->getJson('/api/openapi.json');
+        $specResponse->assertStatus(200)
+            ->assertJsonPath('openapi', '3.0.0')
+            ->assertJsonStructure([
+                'openapi',
+                'info' => ['title', 'description', 'version'],
+                'paths' => [
+                    '/api/bff/visao-geral',
+                    '/api/bff/dashboard',
+                    '/api/ordens',
+                    '/api/tecnicos',
+                ],
+            ]);
+
+        $uiResponse = $this->get('/api-docs');
+        $uiResponse->assertStatus(200);
+        $this->assertStringContainsString('Swagger OpenAPI 3.0', $uiResponse->getContent());
+    }
 }
+

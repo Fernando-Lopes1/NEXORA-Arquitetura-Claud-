@@ -7,6 +7,7 @@ import {
   VALID_STATUSES
 } from '../models/OrdemServico';
 import { LifecycleValidator } from '../services/lifecycle.validator';
+import { serviceBusPublisher } from '../services/serviceBus.publisher';
 
 export async function listOrdens(req: Request, res: Response): Promise<void> {
   try {
@@ -108,6 +109,15 @@ export async function createOrdem(req: Request, res: Response): Promise<void> {
       prazo: prazo || null
     });
 
+    if (novaOrdem.tecnico) {
+      const corrId = String(req.headers['x-correlation-id'] || '');
+      await serviceBusPublisher.publishOrdemEvent(
+        novaOrdem,
+        serviceBusPublisher.resolveEventType(novaOrdem.status, true),
+        corrId
+      );
+    }
+
     res.status(201).json(novaOrdem);
   } catch (error: any) {
     console.error('Erro ao cadastrar ordem de serviço:', error);
@@ -194,6 +204,15 @@ export async function updateOrdem(req: Request, res: Response): Promise<void> {
       prazo: prazo !== undefined ? (prazo ? String(prazo).trim() : null) : undefined
     });
 
+    if (updated && (updated.tecnico || existing.tecnico)) {
+      const corrId = String(req.headers['x-correlation-id'] || '');
+      await serviceBusPublisher.publishOrdemEvent(
+        updated,
+        serviceBusPublisher.resolveEventType(updated.status, false),
+        corrId
+      );
+    }
+
     res.status(200).json(updated);
   } catch (error: any) {
     console.error('Erro ao atualizar ordem de serviço:', error);
@@ -276,9 +295,41 @@ export async function updateOrdemStatus(req: Request, res: Response): Promise<vo
       tecnico !== undefined ? effectiveTecnico : undefined
     );
 
+    if (updated && (updated.tecnico || existing.tecnico)) {
+      const corrId = String(req.headers['x-correlation-id'] || '');
+      await serviceBusPublisher.publishOrdemEvent(
+        updated,
+        serviceBusPublisher.resolveEventType(updated.status, false),
+        corrId
+      );
+    }
+
     res.status(200).json(updated);
   } catch (error: any) {
     console.error('Erro ao atualizar status da ordem de serviço:', error);
     res.status(500).json({ erro: `Erro ao atualizar status da ordem: ${error.message}` });
   }
 }
+
+export async function getMensageriaStatus(_req: Request, res: Response): Promise<void> {
+  try {
+    const dbHealth = await ordemRepository.checkHealth();
+    const status = serviceBusPublisher.getStatus();
+    res.status(200).json({
+      servico: 'os-service',
+      arquitetura: 'Hexagonal (Ports & Adapters)',
+      banco_alvo: 'Azure SQL Database (Free 1 DTU)',
+      provedor_ativo: dbHealth.provider,
+      conectado: dbHealth.connected,
+      broker: status.broker,
+      queueOrTopic: status.queueOrTopic,
+      publishedCount: status.publishedCount,
+      recentEvents: status.recentEvents,
+      mensageria: status,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({ erro: `Erro ao consultar status de mensageria: ${error.message}` });
+  }
+}
+

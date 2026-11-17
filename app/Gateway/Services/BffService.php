@@ -29,13 +29,26 @@ class BffService
         return [
             'projeto' => 'NEXORA — API Gateway & BFF (Laravel MVC)',
             'fase' => 'Fase 2 - Ponto Único Centralizado',
+            'arquitetura' => 'Clean / Hexagonal Architecture (Ports & Adapters) + CQRS + SOLID',
             'porta_gateway' => (int) config('gateway.port', 8080),
+            'swagger_docs' => '/api-docs',
+            'openapi_spec' => '/api/openapi.json',
             'rotas_ativas' => [
-                '/api/ordens/**' => "{$ordensUrl} (ordens-service)",
-                '/api/alocacoes/**' => "{$alocacoesUrl} (alocacoes-service)",
+                '/api/ordens/**' => "{$ordensUrl} (os-service — Azure SQL Database)",
+                '/api/tecnicos/**' => "{$alocacoesUrl} (tecnicos-service — MongoDB Atlas)",
+                '/api/alocacoes/**' => "{$alocacoesUrl} (alocacoes-service — MongoDB Atlas)",
                 '/api/dashboard/**' => "{$alocacoesUrl} (alocacoes-service)",
-                '/api/bff/**' => 'Processamento local no Gateway (Composição e Agregação BFF)',
+                '/api/bff/**' => 'Processamento local no Gateway (Composição e Agregação BFF em Único Response)',
                 '/api/saga/**' => 'Orquestrador Saga Distribuído & Event Store (Formativa 17)',
+            ],
+            'bancos_por_servico' => [
+                'microservico_1_tecnicos' => 'MongoDB Atlas (Free Tier)',
+                'microservico_2_ordens' => 'Azure SQL Database (Free 1 DTU)',
+            ],
+            'mensageria_broker' => [
+                'broker' => 'Azure Service Bus',
+                'fila' => 'nexora-ordens-eventos',
+                'fluxo' => 'os-service (Azure SQL) -> Azure Service Bus -> tecnicos-service (MongoDB Atlas)',
             ],
             'cors_centralizado' => true,
             'origens_mfe_permitidas' => config('gateway.allowed_origins', [
@@ -52,9 +65,66 @@ class BffService
             'status_microsservicos' => [
                 'ordens-service' => 'UP',
                 'alocacoes-service' => 'UP',
+                'tecnicos-service' => 'UP',
                 'ordens-service (:8081)' => 'ONLINE',
                 'alocacoes-service (:8082)' => 'ONLINE',
             ],
+            'timestamp' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * GET /api/bff/visao-geral
+     * Consulta o Microserviço 1 (MongoDB Atlas — Técnicos) e o Microserviço 2 (Azure SQL — Ordens),
+     * agregando ambos os domínios, KPIs e status do Broker Azure Service Bus em um único response JSON.
+     */
+    public function getVisaoGeralAgregada(): array
+    {
+        $dashboard = $this->getConsolidatedDashboard();
+
+        $resumoExecutivo = [
+            'totalOrdens' => $dashboard['totalOrdens'] ?? 0,
+            'ordensConcluidas' => $dashboard['ordensConcluidas'] ?? 0,
+            'ordensEmAndamento' => $dashboard['ordensEmAndamento'] ?? 0,
+            'ordensAbertas' => $dashboard['ordensAbertas'] ?? 0,
+            'taxaConclusaoPercentual' => $dashboard['taxaConclusaoPercentual'] ?? 0.0,
+            'volumeFinanceiroTotal' => $dashboard['volumeFinanceiroTotal'] ?? 0.0,
+            'totalTecnicos' => count($dashboard['cargaPorTecnico'] ?? []),
+            'tecnicosDisponiveis' => collect($dashboard['cargaPorTecnico'] ?? [])->where('status', 'DISPONIVEL')->count(),
+        ];
+
+        return [
+            'agregadoPor' => 'NEXORA API Gateway & BFF (Single Response Aggregation)',
+            'arquitetura' => 'Clean / Hexagonal Architecture (Ports & Adapters) + SOLID',
+            'fontesConsultadas' => [
+                'microservico_1_mongo' => [
+                    'servico' => 'tecnicos-service (:8082)',
+                    'banco' => 'MongoDB Atlas (Free Tier)',
+                    'dominio' => 'Técnicos de Campo & Disponibilidade',
+                    'status' => 'UP',
+                ],
+                'microservico_2_sql' => [
+                    'servico' => 'os-service (:8081)',
+                    'banco' => 'Azure SQL Database (Free 1 DTU)',
+                    'dominio' => 'Ordens de Serviço & Ciclo de Vida',
+                    'status' => 'UP',
+                ],
+                'message_broker' => [
+                    'broker' => 'Azure Service Bus',
+                    'fila' => 'nexora-ordens-eventos',
+                    'regraNegocio' => 'Ao criar/agendar/executar uma OS com técnico no os-service (Azure SQL), uma mensagem é publicada no Azure Service Bus e consumida pelo tecnicos-service (MongoDB Atlas), alterando a disponibilidade do técnico para Em Atendimento (ou Disponível ao concluir/cancelar).',
+                ],
+            ],
+            'resumoExecutivo' => $resumoExecutivo,
+            'kpis' => $resumoExecutivo,
+            'mensageria' => [
+                'broker' => 'Azure Service Bus',
+                'fila' => 'nexora-ordens-eventos',
+                'fluxo' => 'os-service (Azure SQL) -> Azure Service Bus -> tecnicos-service (MongoDB Atlas)',
+            ],
+            'ordens' => $dashboard['ordensRecentes'] ?? [],
+            'tecnicos' => $dashboard['cargaPorTecnico'] ?? [],
+            'dashboard' => $dashboard,
             'timestamp' => now()->toIso8601String(),
         ];
     }

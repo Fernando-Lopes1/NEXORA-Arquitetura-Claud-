@@ -1,10 +1,10 @@
 export const swaggerSpec = {
   openapi: '3.0.0',
   info: {
-    title: 'NEXORA Field Service - tecnicos-service API',
-    version: '1.0.0',
+    title: 'NEXORA Field Service - Microserviço 1: tecnicos-service API (MongoDB Atlas + Azure Service Bus)',
+    version: '2.0.0',
     description:
-      '### 🖥️ [👉 CLIQUE AQUI PARA ABRIR A INTERFACE WEB DO CRUD (PAINEL VISUAL)](/app)\n\nMicrosserviço autônomo do ERP NEXORA para gestão da equipe técnica de campo (FSM). Implementa o padrão Database-per-Service com persistência PostgreSQL em nuvem e fallback autônomo em SQLite local.'
+      '### 🖥️ [👉 CLIQUE AQUI PARA ABRIR A INTERFACE WEB DO CRUD (PAINEL VISUAL)](/app)\n\n**Microserviço 1 (MongoDB Atlas Free Tier)** do ecossistema NEXORA para gestão da equipe técnica de campo. Construído em **Arquitetura Hexagonal (Ports & Adapters)** com **Database-per-Service (MongoDB Atlas)** e integração assíncrona via **Azure Service Bus (`nexora-ordens-eventos`)**.'
   },
   servers: [
     {
@@ -19,7 +19,11 @@ export const swaggerSpec = {
   tags: [
     {
       name: 'Técnicos de Campo',
-      description: 'Operações CRUD e gestão de disponibilidade da equipe técnica'
+      description: 'Operações CRUD no MongoDB Atlas e gestão de disponibilidade da equipe técnica'
+    },
+    {
+      name: 'Azure Service Bus Broker',
+      description: 'Consumo assíncrono de eventos de Ordens de Serviço e sincronização automática de disponibilidade'
     },
     {
       name: 'Health',
@@ -29,7 +33,7 @@ export const swaggerSpec = {
   paths: {
     '/health': {
       get: {
-        summary: 'Verificação de integridade e status da conexão com banco',
+        summary: 'Verificação de integridade e status da conexão com MongoDB Atlas',
         tags: ['Health'],
         responses: {
           '200': {
@@ -41,6 +45,45 @@ export const swaggerSpec = {
                 }
               }
             }
+          }
+        }
+      }
+    },
+    '/api/tecnicos/mensageria/status': {
+      get: {
+        summary: 'Consulta status do consumidor Azure Service Bus e histórico de mensagens processadas',
+        tags: ['Azure Service Bus Broker'],
+        responses: {
+          '200': {
+            description: 'Telemetria do Broker Azure Service Bus e conexão MongoDB Atlas'
+          }
+        }
+      }
+    },
+    '/api/tecnicos/eventos': {
+      post: {
+        summary: 'Recebe evento de alocação/conclusão de Ordem de Serviço (Azure Service Bus / Bridge)',
+        tags: ['Azure Service Bus Broker'],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  eventType: { type: 'string', example: 'ORDEM_ALOCADA' },
+                  ordemId: { type: 'integer', example: 1001 },
+                  cliente: { type: 'string', example: 'Hospital Central São Lucas' },
+                  statusOrdem: { type: 'string', example: 'Em Execução' },
+                  tecnicoNome: { type: 'string', example: 'Fernando Lopes' }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          '200': {
+            description: 'Evento processado e disponibilidade do técnico atualizada no MongoDB Atlas'
           }
         }
       }

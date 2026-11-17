@@ -40,6 +40,15 @@ class BffController extends Controller
     }
 
     /**
+     * GET /api/bff/visao-geral
+     * Retorna em um único response os dados agregados do Microserviço Mongo + Microserviço SQL + Broker.
+     */
+    public function visaoGeral(): JsonResponse
+    {
+        return response()->json($this->bffService->getVisaoGeralAgregada(), 200);
+    }
+
+    /**
      * GET /api/bff/ordens/{id}
      * Vertical service composition combining Order details, Technician profile, SLA & financial metrics.
      */

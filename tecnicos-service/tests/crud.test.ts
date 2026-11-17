@@ -1,6 +1,8 @@
 import http from 'http';
 import app from '../src/app';
 import { getDatabase } from '../src/db/factory';
+import { MongoAdapter } from '../src/db/mongo.adapter';
+import { getServiceBusConsumer } from '../src/services/serviceBus.consumer';
 
 async function runTests() {
   console.log('====================================================');
@@ -11,9 +13,9 @@ async function runTests() {
   const db = await getDatabase();
   console.log(`📦 Banco de dados para testes: ${db.getProviderName()}\n`);
 
-  // Inicializa servidor em porta efêmera aleatória
+  // Inicializa servidor em porta efêmera aleatória estritamente em 127.0.0.1
   const server = http.createServer(app);
-  await new Promise<void>((resolve) => server.listen(0, resolve));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address() as any;
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
@@ -435,6 +437,106 @@ async function runTests() {
       if (res.status !== 404) throw new Error(`Esperado HTTP 404, recebido ${res.status}`);
       const data = await res.json() as any;
       if (!data.erro) throw new Error('Campo erro ausente na resposta 404');
+    });
+
+    // -------------------------------------------------------------
+    // 9. MongoDB Atlas Adapter & Azure Service Bus Consumer
+    // -------------------------------------------------------------
+    await test('MongoAdapter inicializa coleção de técnicos com 5 seeds e executa CRUD completo com sanitização NoSQL', async () => {
+      const mongo = new MongoAdapter('mongodb://inmemory', 'nexora_tecnicos_test');
+      await mongo.init();
+      if (mongo.getProviderName() !== 'MongoDB Atlas') {
+        throw new Error(`Provider esperado 'MongoDB Atlas', recebido '${mongo.getProviderName()}'`);
+      }
+
+      const listResult = await mongo.query('SELECT * FROM tecnicos ORDER BY nome ASC');
+      if (listResult.rowCount < 5) {
+        throw new Error(`Esperado pelo menos 5 seeds no MongoAdapter, recebido ${listResult.rowCount}`);
+      }
+
+      const insertResult = await mongo.query(
+        'INSERT INTO tecnicos (nome, especialidade, telefone, email, regiao, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        ['Hugo Takeda', 'Rede', '(11) 98888-7777', 'hugo.takeda@nexora.com.br', 'São Paulo - Sul', 'Disponível']
+      );
+      if (insertResult.rowCount !== 1 || insertResult.rows[0].nome !== 'Hugo Takeda') {
+        throw new Error('Falha ao inserir documento no MongoAdapter');
+      }
+
+      const newId = insertResult.rows[0].id;
+      const updateResult = await mongo.query(
+        'UPDATE tecnicos SET status = $1, atualizado_em = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+        ['Em Atendimento', newId]
+      );
+      if (updateResult.rows[0].status !== 'Em Atendimento') {
+        throw new Error('Falha ao atualizar status no MongoAdapter');
+      }
+
+      // Testa bloqueio de tentativa de NoSQL Injection com objeto operador ($ne)
+      let blockedInjection = false;
+      try {
+        await mongo.query('SELECT * FROM tecnicos WHERE especialidade = $1', [{ $ne: null }]);
+      } catch {
+        blockedInjection = true;
+      }
+      if (!blockedInjection) {
+        throw new Error('MongoAdapter deveria bloquear objetos operadores em parâmetros (NoSQL Injection defense)');
+      }
+
+      await mongo.close();
+    });
+
+    await test('POST /api/tecnicos/eventos processa evento do Azure Service Bus e sincroniza disponibilidade do técnico', async () => {
+      // Verifica que Fernando Lopes começa Disponível
+      const resAtribuicao = await fetch(`${baseUrl}/api/tecnicos/eventos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'ORDEM_STATUS_ALTERADO',
+          ordemId: 101,
+          cliente: 'DataCenter Paulista',
+          statusAnterior: 'Aberta',
+          statusNovo: 'Em Execução',
+          tecnico: 'Fernando Lopes',
+          correlationId: 'sb-corr-test-001'
+        })
+      });
+      if (resAtribuicao.status !== 200) throw new Error(`Esperado HTTP 200, recebido ${resAtribuicao.status}`);
+      const bodyAtribuicao = await resAtribuicao.json() as any;
+      if (!bodyAtribuicao.processado || bodyAtribuicao.novoStatus !== 'Em Atendimento') {
+        throw new Error(`Esperado técnico em 'Em Atendimento', recebido: ${JSON.stringify(bodyAtribuicao)}`);
+      }
+
+      // Evento de conclusão deve liberar o técnico para Disponível
+      const resConclusao = await fetch(`${baseUrl}/api/tecnicos/eventos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'ORDEM_STATUS_ALTERADO',
+          ordemId: 101,
+          cliente: 'DataCenter Paulista',
+          statusAnterior: 'Em Execução',
+          statusNovo: 'Concluída',
+          tecnico: 'Fernando Lopes',
+          correlationId: 'sb-corr-test-002'
+        })
+      });
+      if (resConclusao.status !== 200) throw new Error(`Esperado HTTP 200, recebido ${resConclusao.status}`);
+      const bodyConclusao = await resConclusao.json() as any;
+      if (!bodyConclusao.processado || bodyConclusao.novoStatus !== 'Disponível') {
+        throw new Error(`Esperado técnico liberado para 'Disponível', recebido: ${JSON.stringify(bodyConclusao)}`);
+      }
+    });
+
+    await test('GET /api/tecnicos/mensageria/status retorna histórico de eventos consumidos do Azure Service Bus', async () => {
+      const res = await fetch(`${baseUrl}/api/tecnicos/mensageria/status`);
+      if (res.status !== 200) throw new Error(`Esperado HTTP 200, recebido ${res.status}`);
+      const data = await res.json() as any;
+      if (data.broker !== 'Azure Service Bus') throw new Error(`Broker esperado 'Azure Service Bus', recebido '${data.broker}'`);
+      if (data.processedCount < 2) throw new Error(`Esperado pelo menos 2 eventos processados, recebido ${data.processedCount}`);
+      const consumer = getServiceBusConsumer();
+      if (consumer.getStatus().processedCount < 2) {
+        throw new Error('Instância do ServiceBusConsumer não contabilizou os eventos');
+      }
     });
 
   } finally {

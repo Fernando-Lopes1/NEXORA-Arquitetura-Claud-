@@ -12,7 +12,7 @@ async function runAdversarialTests() {
   console.log(`📦 Database provider ativo: ${db.getProviderName()}\n`);
 
   const server = http.createServer(app);
-  await new Promise<void>((resolve) => server.listen(0, resolve));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address() as any;
   const baseUrl = `http://127.0.0.1:${address.port}`;
 

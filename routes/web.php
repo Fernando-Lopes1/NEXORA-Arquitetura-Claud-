@@ -1,5 +1,6 @@
 <?php
 
+use App\Gateway\Controllers\GatewaySwaggerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrdemServicoController;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect()->route('ordens.index');
 });
+
+Route::get('/api-docs', [GatewaySwaggerController::class, 'ui'])->name('gateway.swagger.ui');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

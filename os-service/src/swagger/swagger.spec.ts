@@ -1,9 +1,9 @@
 export const swaggerSpec = {
   openapi: '3.0.0',
   info: {
-    title: 'NEXORA Field Service - os-service API',
-    version: '1.0.0',
-    description: '### 🖥️ [👉 CLIQUE AQUI PARA ABRIR A INTERFACE WEB DO CRUD (PAINEL VISUAL)](/app)\n\nMicrosserviço autônomo do ERP NEXORA para gerenciamento de Ordens de Serviço (FSM). Implementa o padrão Database-per-Service com persistência PostgreSQL em nuvem e fallback autônomo em SQLite local.'
+    title: 'NEXORA Field Service - Microserviço 2: os-service API (Azure SQL Database + Azure Service Bus)',
+    version: '2.0.0',
+    description: '### 🖥️ [👉 CLIQUE AQUI PARA ABRIR A INTERFACE WEB DO CRUD (PAINEL VISUAL)](/app)\n\n**Microserviço 2 (Azure SQL Database Free 1 DTU)** do ecossistema NEXORA para gerenciamento de Ordens de Serviço (FSM). Construído em **Arquitetura Hexagonal (Ports & Adapters)** com **Database-per-Service (Azure SQL Database)** e publicação assíncrona de eventos no **Azure Service Bus (`nexora-ordens-eventos`)**.'
   },
   servers: [
     {
@@ -18,7 +18,11 @@ export const swaggerSpec = {
   tags: [
     {
       name: 'Ordens de Serviço',
-      description: 'Operações CRUD e transições de ciclo de vida de Ordens de Serviço'
+      description: 'Operações CRUD no Azure SQL Database e transições de ciclo de vida de Ordens de Serviço'
+    },
+    {
+      name: 'Azure Service Bus Broker',
+      description: 'Publicação assíncrona de eventos de Ordens de Serviço para sincronização com tecnicos-service'
     },
     {
       name: 'Health',
@@ -28,7 +32,7 @@ export const swaggerSpec = {
   paths: {
     '/health': {
       get: {
-        summary: 'Verificação de integridade e status da conexão com banco',
+        summary: 'Verificação de integridade e status da conexão com Azure SQL Database',
         tags: ['Health'],
         responses: {
           '200': {
@@ -40,6 +44,17 @@ export const swaggerSpec = {
                 }
               }
             }
+          }
+        }
+      }
+    },
+    '/api/ordens/mensageria/status': {
+      get: {
+        summary: 'Consulta status do publicador Azure Service Bus e histórico de eventos disparados',
+        tags: ['Azure Service Bus Broker'],
+        responses: {
+          '200': {
+            description: 'Telemetria do Broker Azure Service Bus e conexão Azure SQL Database'
           }
         }
       }

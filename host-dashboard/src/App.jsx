@@ -5,8 +5,8 @@ const RemoteDashboard = React.lazy(() => import('remoteDashboard/Dashboard'));
 const RemoteDashboardStandaloneApp = React.lazy(() => import('remoteDashboard/RemoteApp'));
 
 const API_TECNICOS_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  ? 'http://localhost:8082'
-  : 'https://nexora-remote-dashboard-fernando.azurewebsites.net';
+  ? 'http://localhost:8080'
+  : 'https://nexora-gateway-api.azurewebsites.net';
 
 // Componente Error Boundary para resiliência caso o Remote 2 esteja indisponível
 class ErrorBoundary extends React.Component {
@@ -15,12 +15,12 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError() {
     return { hasError: true };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Erro ao carregar o MFE Remote 2 (Dashboard):', error, errorInfo);
+  componentDidCatch() {
+    // Log sanitizado sem expor stack trace estruturado no console do cliente
   }
 
   render() {
@@ -46,7 +46,7 @@ class ErrorBoundary extends React.Component {
 
 const App = () => {
   // Dados operacionais para visualização executiva no Host 2
-  const [orders] = useState([
+  const [orders, setOrders] = useState([
     {
       id: 'OS-1001',
       cliente: 'Hospital Central São Lucas',
@@ -82,8 +82,9 @@ const App = () => {
   // Estado para alternar entre visão Host, CRUD Técnicos e visão Remote
   const [activeTab, setActiveTab] = useState('host'); // 'host' | 'tecnicos' | 'remote'
   const [backendOnline, setBackendOnline] = useState(false);
+  const [uiNotice, setUiNotice] = useState('');
 
-  // Estado da lista de técnicos de campo
+  // Estado da lista de técnicos de campo (MongoDB Atlas via API Gateway & BFF)
   const [tecnicos, setTecnicos] = useState([
     { id: 1, nome: 'Henrique Ricardo', especialidade: 'Climatização', telefone: '(41) 98888-1111', email: 'henrique@nexora.com.br', regiao_atuacao: 'Curitiba Centro', status_disponibilidade: 'Em Atendimento' },
     { id: 2, nome: 'Felipe Carneiro', especialidade: 'Refrigeração', telefone: '(41) 98888-2222', email: 'felipe@nexora.com.br', regiao_atuacao: 'Zona Sul', status_disponibilidade: 'Disponível' },
@@ -102,16 +103,40 @@ const App = () => {
 
   const fetchTecnicos = async () => {
     try {
-      const res = await fetch(`${API_TECNICOS_URL}/api/tecnicos`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setTecnicos(data);
+      const [resBff, resTec] = await Promise.all([
+        fetch(`${API_TECNICOS_URL}/api/bff/visao-geral`),
+        fetch(`${API_TECNICOS_URL}/api/tecnicos`)
+      ]);
+
+      if (resBff.ok) {
+        const bffData = await resBff.json();
+        if (Array.isArray(bffData.ordens) && bffData.ordens.length > 0) {
+          setOrders(bffData.ordens.map((o) => ({
+            id: o.codigo || o.id,
+            cliente: o.cliente,
+            servico: o.servico || o.tipoServico,
+            tecnico: o.tecnicoDesignado || 'Não atribuído',
+            prioridade: o.prioridade,
+            situacao: o.situacao || o.status,
+            valorEstimado: Number(o.valorEstimado ?? o.valor ?? 0).toFixed(2),
+            dataCriacao: o.dataCriacao ? new Date(o.dataCriacao).toLocaleDateString('pt-BR') : 'Hoje',
+          })));
         }
         setBackendOnline(true);
       }
-    } catch (e) {
-      console.log('tecnicos-service offline, usando dados locais');
+
+      if (resTec.ok) {
+        const data = await resTec.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setTecnicos(data.map((t) => ({
+            ...t,
+            regiao_atuacao: t.regiao_atuacao || t.regiao || 'Curitiba',
+            status_disponibilidade: t.status_disponibilidade || t.status || 'Disponível',
+          })));
+        }
+        setBackendOnline(true);
+      }
+    } catch {
       setBackendOnline(false);
     }
   };
@@ -122,17 +147,28 @@ const App = () => {
 
   const handleAddTecnico = async (e) => {
     e.preventDefault();
-    if (!formTecnico.nome.trim()) return alert('Informe o nome do técnico');
+    if (!formTecnico.nome.trim()) {
+      setUiNotice('Informe o nome do técnico.');
+      return;
+    }
 
     try {
       const res = await fetch(`${API_TECNICOS_URL}/api/tecnicos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formTecnico),
+        body: JSON.stringify({
+          ...formTecnico,
+          regiao: formTecnico.regiao_atuacao,
+          status: formTecnico.status_disponibilidade,
+        }),
       });
       if (res.ok) {
         const created = await res.json();
-        setTecnicos((prev) => [created, ...prev]);
+        setTecnicos((prev) => [{
+          ...created,
+          regiao_atuacao: created.regiao_atuacao || created.regiao || formTecnico.regiao_atuacao,
+          status_disponibilidade: created.status_disponibilidade || created.status || formTecnico.status_disponibilidade,
+        }, ...prev]);
         setFormTecnico({
           nome: '',
           especialidade: 'Climatização',
@@ -141,13 +177,12 @@ const App = () => {
           regiao_atuacao: '',
           status_disponibilidade: 'Disponível',
         });
-        alert('Técnico cadastrado com sucesso no banco de dados!');
+        setUiNotice('Técnico cadastrado no MongoDB Atlas via API Gateway & BFF!');
       }
-    } catch (err) {
-      // Fallback local
+    } catch {
       const localCreated = { id: Date.now(), ...formTecnico };
       setTecnicos((prev) => [localCreated, ...prev]);
-      alert('Técnico salvo localmente!');
+      setUiNotice('Técnico registrado localmente em modo resiliente.');
     }
   };
 
@@ -156,24 +191,25 @@ const App = () => {
       await fetch(`${API_TECNICOS_URL}/api/tecnicos/${id}/disponibilidade`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status_disponibilidade: status }),
+        body: JSON.stringify({ status, status_disponibilidade: status }),
       });
       setTecnicos((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status_disponibilidade: status } : t))
+        prev.map((t) => (t.id === id ? { ...t, status_disponibilidade: status, status } : t))
       );
-    } catch (err) {
+      setUiNotice(`Disponibilidade do técnico #${id} atualizada para "${status}" no MongoDB Atlas!`);
+    } catch {
       setTecnicos((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status_disponibilidade: status } : t))
+        prev.map((t) => (t.id === id ? { ...t, status_disponibilidade: status, status } : t))
       );
     }
   };
 
   const handleDeleteTecnico = async (id) => {
-    if (!window.confirm('Deseja excluir este técnico?')) return;
     try {
       await fetch(`${API_TECNICOS_URL}/api/tecnicos/${id}`, { method: 'DELETE' });
       setTecnicos((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
+      setUiNotice(`Técnico #${id} removido via API Gateway & BFF.`);
+    } catch {
       setTecnicos((prev) => prev.filter((t) => t.id !== id));
     }
   };
@@ -186,11 +222,16 @@ const App = () => {
           <div style={styles.logoBadge}>N</div>
           <div>
             <h1 style={styles.brandTitle}>NEXORA</h1>
-            <p style={styles.brandSubtitle}>Dashboard BI & Gestão de Técnicos (Funcionalidade 2)</p>
+            <p style={styles.brandSubtitle}>Dashboard BI & Gestão de Técnicos (MFE -> API Gateway & BFF)</p>
           </div>
         </div>
 
         <div style={styles.navGroupInfo}>
+          {uiNotice && (
+            <span style={{ fontSize: '12px', backgroundColor: '#065f46', padding: '5px 10px', borderRadius: '6px' }}>
+              {uiNotice}
+            </span>
+          )}
           <span style={{
             padding: '6px 12px',
             borderRadius: '9999px',
@@ -203,10 +244,10 @@ const App = () => {
             alignItems: 'center',
             gap: '6px'
           }}>
-            {backendOnline ? '🟢 tecnicos-service :8082 Conectado' : '🟠 Modo Fallback Local'}
+            {backendOnline ? '🟢 API Gateway & BFF (:8080) Conectado' : '🟠 Modo Fallback Local'}
           </span>
           <a
-            href="https://nexora-remote-dashboard-fernando.azurewebsites.net/api-docs"
+            href={`${API_TECNICOS_URL}/api-docs`}
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -222,7 +263,7 @@ const App = () => {
               gap: '6px'
             }}
           >
-            📖 Swagger API (:8082)
+            📖 Swagger Gateway & BFF
           </a>
         </div>
       </header>
@@ -238,7 +279,7 @@ const App = () => {
                 ...(activeTab === 'host' ? styles.tabBtnActive : styles.tabBtnInactive),
               }}
             >
-              🏢 Visão Host (Dashboard BI)
+              🏢 Visão Host (Dashboard BI via BFF)
             </button>
             <button
               onClick={() => setActiveTab('tecnicos')}
@@ -247,7 +288,7 @@ const App = () => {
                 ...(activeTab === 'tecnicos' ? styles.tabBtnActive : styles.tabBtnInactive),
               }}
             >
-              👥 Gestão de Técnicos (CRUD :8082)
+              👥 Gestão de Técnicos (CRUD via Gateway -> MongoDB)
             </button>
             <button
               onClick={() => setActiveTab('remote')}

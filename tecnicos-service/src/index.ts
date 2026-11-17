@@ -1,17 +1,21 @@
 import app from './app';
 import { config } from './config/env';
 import { getDatabase } from './db/factory';
+import { serviceBusConsumer } from './services/serviceBus.consumer';
 
 async function bootstrap() {
   try {
-    // Inicializa o banco de dados (Cloud PostgreSQL ou SQLite autônomo)
+    // Inicializa o banco de dados (MongoDB Atlas Free Tier com fallback autônomo)
     const db = await getDatabase();
     console.log(`📦 Provedor de Banco de Dados ativo: ${db.getProviderName()}`);
+
+    // Inicializa o consumidor do Azure Service Bus (nexora-ordens-eventos)
+    await serviceBusConsumer.start();
 
     const PORT = config.port;
     const server = app.listen(PORT, () => {
       console.log('====================================================');
-      console.log(`🚀 [tecnicos-service] NEXORA Técnicos Microservice`);
+      console.log(`🚀 [tecnicos-service] NEXORA Técnicos Microservice (MongoDB Atlas)`);
       console.log(`🌐 Servidor rodando na porta: ${PORT}`);
       console.log(`📖 Documentação Swagger UI: http://localhost:${PORT}/api-docs`);
       console.log(`🩺 Health Check Endpoint:  http://localhost:${PORT}/health`);
@@ -23,6 +27,7 @@ async function bootstrap() {
       console.log('\n🛑 Encerrando [tecnicos-service] graciosamente...');
       server.close(async () => {
         try {
+          await serviceBusConsumer.close();
           await db.close();
           console.log('✅ Conexões de banco fechadas.');
         } catch (closeErr: any) {

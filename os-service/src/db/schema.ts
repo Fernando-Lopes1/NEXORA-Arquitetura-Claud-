@@ -32,6 +32,26 @@ CREATE INDEX IF NOT EXISTS idx_ordens_status ON ordens_servico (status);
 CREATE INDEX IF NOT EXISTS idx_ordens_cliente ON ordens_servico (cliente);
 `;
 
+export const OS_AZURE_SQL_SCHEMA = `
+IF OBJECT_ID('dbo.ordens_servico', 'U') IS NULL
+BEGIN
+  CREATE TABLE dbo.ordens_servico (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    cliente NVARCHAR(255) NOT NULL,
+    descricao NVARCHAR(MAX) NOT NULL,
+    tecnico NVARCHAR(255) NULL,
+    prioridade NVARCHAR(50) NOT NULL DEFAULT N'Média',
+    status NVARCHAR(50) NOT NULL DEFAULT N'Aberta',
+    valor_estimado DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    prazo NVARCHAR(50) NULL,
+    criado_em NVARCHAR(64) NOT NULL,
+    atualizado_em NVARCHAR(64) NOT NULL
+  );
+  CREATE INDEX idx_ordens_status ON dbo.ordens_servico (status);
+  CREATE INDEX idx_ordens_cliente ON dbo.ordens_servico (cliente);
+END
+`;
+
 export interface SeedOrdem {
   cliente: string;
   descricao: string;

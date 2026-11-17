@@ -5,11 +5,13 @@ import {
   createOrdem,
   updateOrdem,
   deleteOrdem,
-  updateOrdemStatus
+  updateOrdemStatus,
+  getMensageriaStatus
 } from '../controllers/ordem.controller';
 
 const router = Router();
 
+router.get('/mensageria/status', getMensageriaStatus);
 router.get('/', listOrdens);
 router.post('/', createOrdem);
 router.get('/:id', getOrdemById);

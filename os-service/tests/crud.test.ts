@@ -1,6 +1,8 @@
 import http from 'http';
 import app from '../src/app';
 import { getDatabase } from '../src/db/factory';
+import { AzureSqlAdapter } from '../src/db/azuresql.adapter';
+import { getServiceBusPublisher } from '../src/services/serviceBus.publisher';
 
 async function runTests() {
   console.log('====================================================');
@@ -11,9 +13,9 @@ async function runTests() {
   const db = await getDatabase();
   console.log(`📦 Banco de dados para testes: ${db.getProviderName()}\n`);
 
-  // Inicializa servidor em porta efêmera aleatória
+  // Inicializa servidor em porta efêmera aleatória estritamente em 127.0.0.1
   const server = http.createServer(app);
-  await new Promise<void>((resolve) => server.listen(0, resolve));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address() as any;
   const baseUrl = `http://127.0.0.1:${address.port}`;
 
@@ -400,6 +402,57 @@ async function runTests() {
         method: 'DELETE'
       });
       if (res.status !== 200) throw new Error(`Esperado HTTP 200, recebido ${res.status}`);
+    });
+
+    // -------------------------------------------------------------
+    // 8. Azure SQL Database Adapter & Azure Service Bus Publisher
+    // -------------------------------------------------------------
+    await test('GET /api/ordens/mensageria/status retorna status do publisher Azure Service Bus', async () => {
+      const res = await fetch(`${baseUrl}/api/ordens/mensageria/status`);
+      if (res.status !== 200) throw new Error(`Esperado HTTP 200, recebido ${res.status}`);
+      const data = await res.json() as any;
+      if (data.broker !== 'Azure Service Bus') throw new Error(`Broker esperado 'Azure Service Bus', recebido '${data.broker}'`);
+      if (!data.queueOrTopic) throw new Error('queueOrTopic ausente no status de mensageria');
+      if (!Array.isArray(data.recentEvents)) throw new Error('recentEvents deve ser um array');
+      if (data.publishedCount < 1) throw new Error('Esperado pelo menos 1 evento publicado durante o ciclo CRUD');
+    });
+
+    await test('AzureSqlAdapter converte placeholders $1..$n e RETURNING * para T-SQL parametrizado (@p1, OUTPUT INSERTED.*)', async () => {
+      const azureSql = new AzureSqlAdapter('azuresql://inmemory');
+      await azureSql.init();
+      if (azureSql.getProviderName() !== 'Azure SQL Database') {
+        throw new Error(`Provider esperado 'Azure SQL Database', recebido '${azureSql.getProviderName()}'`);
+      }
+
+      const tsqlInsert = azureSql.toTSql(
+        'INSERT INTO ordens_servico (cliente, descricao, prioridade, status) VALUES ($1, $2, $3, $4) RETURNING *'
+      );
+      if (!tsqlInsert.includes('OUTPUT INSERTED.*') || !tsqlInsert.includes('@p1')) {
+        throw new Error(`Conversão T-SQL inválida para INSERT: ${tsqlInsert}`);
+      }
+
+      const seeded = await azureSql.query('SELECT * FROM ordens_servico ORDER BY id DESC');
+      if (seeded.rowCount < 5) {
+        throw new Error(`Esperado pelo menos 5 seeds no AzureSqlAdapter, recebido ${seeded.rowCount}`);
+      }
+
+      const inserted = await azureSql.query(
+        'INSERT INTO ordens_servico (cliente, descricao, prioridade, status, tecnico, valor_estimado, prazo) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        ['DataCenter Azure Brasil Sul', 'Manutenção de nobreak redundante', 'Urgente', 'Agendada', 'Fernando Lopes', 4200, '2026-12-01']
+      );
+      if (inserted.rowCount !== 1 || inserted.rows[0].cliente !== 'DataCenter Azure Brasil Sul') {
+        throw new Error('Falha ao inserir registro no AzureSqlAdapter');
+      }
+
+      await azureSql.close();
+    });
+
+    await test('ServiceBusPublisher registra eventos de ciclo de vida com correlationId', async () => {
+      const publisher = getServiceBusPublisher();
+      const status = publisher.getStatus();
+      if (status.publishedCount < 1) {
+        throw new Error('ServiceBusPublisher deveria ter publicado eventos das operações anteriores');
+      }
     });
 
   } finally {

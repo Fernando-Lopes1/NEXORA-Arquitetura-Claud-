@@ -5,8 +5,9 @@
   "description": "TDE 4 - Testes de arquitetura (backend e frontend) com dependency-cruiser",
   "scripts": {
     "test:backend": "depcruise --config backend/.dependency-cruiser.cjs ../os-service/src ../tecnicos-service/src",
-    "test:frontend": "depcruise --config frontend/.dependency-cruiser.cjs ../host/src ../remote/src ../host-dashboard/src ../remote-dashboard/src",
-    "test": "npm run test:backend && npm run test:frontend"
+    "test:frontend": "depcruise --config frontend/.dependency-cruiser.cjs ../host/src ../remote/src ../host-dashboard/src ../remote-dashboard/src && node ../scripts/test-frontend-architecture-and-unit.mjs",
+    "test:gateway": "cd .. && ./vendor/bin/pest TDE4-Testes-Arquitetura/gateway/GatewayArchTest.php",
+    "test": "npm run test:backend && npm run test:frontend && npm run test:gateway"
   },
   "devDependencies": {
     "dependency-cruiser": "^17.4.3",

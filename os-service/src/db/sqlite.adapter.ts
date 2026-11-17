@@ -2,9 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { IDatabaseAdapter, QueryResult } from './adapter.interface';
 import { OS_SQLITE_SCHEMA, SEED_ORDENS } from './schema';
+import { AzureSqlAdapter } from './azuresql.adapter';
 
 export class SqliteAdapter implements IDatabaseAdapter {
-  private db: any;
+  private db: any = null;
+  private fallbackMemory: AzureSqlAdapter | null = null;
   private dbPath: string;
 
   constructor(filename: string = 'os.sqlite') {
@@ -19,12 +21,18 @@ export class SqliteAdapter implements IDatabaseAdapter {
     try {
       const { DatabaseSync } = require('node:sqlite');
       this.db = new DatabaseSync(this.dbPath);
-    } catch (err: any) {
-      throw new Error(`Falha ao inicializar SQLite nativo: ${err.message}`);
+    } catch {
+      // Fallback para Node < 22.5 onde node:sqlite não está embutido
+      this.fallbackMemory = new AzureSqlAdapter('azuresql://inmemory');
+      await this.fallbackMemory.connect();
     }
   }
 
   async query<T = any>(sql: string, params: any[] = []): Promise<QueryResult<T>> {
+    if (this.fallbackMemory) {
+      return this.fallbackMemory.query<T>(sql, params);
+    }
+
     const sqliteSql = sql.replace(/\$\d+/g, '?');
     const trimmed = sqliteSql.trim();
     const isSelect = trimmed.toUpperCase().startsWith('SELECT');
@@ -45,6 +53,10 @@ export class SqliteAdapter implements IDatabaseAdapter {
   }
 
   async exec(sql: string): Promise<void> {
+    if (this.fallbackMemory) {
+      await this.fallbackMemory.exec(sql);
+      return;
+    }
     try {
       this.db.exec(sql);
     } catch (error: any) {
@@ -53,6 +65,11 @@ export class SqliteAdapter implements IDatabaseAdapter {
   }
 
   async initSchema(): Promise<void> {
+    if (this.fallbackMemory) {
+      await this.fallbackMemory.initSchema();
+      return;
+    }
+
     this.db.exec(OS_SQLITE_SCHEMA);
 
     const checkStmt = this.db.prepare('SELECT COUNT(*) as total FROM ordens_servico');
@@ -82,6 +99,9 @@ export class SqliteAdapter implements IDatabaseAdapter {
   }
 
   async checkConnection(): Promise<boolean> {
+    if (this.fallbackMemory) {
+      return this.fallbackMemory.checkConnection();
+    }
     try {
       if (!this.db) return false;
       const stmt = this.db.prepare('SELECT 1 as ok');
@@ -93,6 +113,11 @@ export class SqliteAdapter implements IDatabaseAdapter {
   }
 
   async close(): Promise<void> {
+    if (this.fallbackMemory) {
+      await this.fallbackMemory.close();
+      this.fallbackMemory = null;
+      return;
+    }
     if (this.db) {
       this.db.close();
       this.db = null;

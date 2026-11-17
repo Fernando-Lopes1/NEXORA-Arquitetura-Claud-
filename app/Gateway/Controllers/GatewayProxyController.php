@@ -335,6 +335,225 @@ class GatewayProxyController extends Controller
         return response()->json($this->bffService->getConsolidatedDashboard(), 200);
     }
 
+    // =========================================================================
+    // Proxy CRUD Completo — Microserviço 1: Técnicos de Campo (MongoDB Atlas :8082)
+    // =========================================================================
+
+    /**
+     * GET /api/tecnicos
+     */
+    public function listarTecnicos(Request $request): JsonResponse
+    {
+        if ($forwarded = $this->tryForwardUpstream($request, 'alocacoes_service', '/api/tecnicos')) {
+            return $forwarded;
+        }
+
+        $query = Tecnico::query()->withCount([
+            'ordensServico as ordens_ativas_count' => function ($q) {
+                $q->whereIn('situacao', [
+                    OrdemServico::STATUS_ABERTA,
+                    OrdemServico::STATUS_AGENDADA,
+                    OrdemServico::STATUS_EM_EXECUCAO,
+                ]);
+            },
+            'ordensServico as total_ordens_count',
+        ]);
+
+        if ($request->filled('especialidade')) {
+            $query->where('especialidade', 'like', '%' . $request->query('especialidade') . '%');
+        }
+
+        $tecnicos = $query->orderBy('id')->get()->map(fn (Tecnico $t) => $this->formatTecnico($t))->values()->all();
+
+        return response()->json($tecnicos, 200);
+    }
+
+    /**
+     * GET /api/tecnicos/{id}
+     */
+    public function obterTecnico(Request $request, string $id): JsonResponse
+    {
+        if ($forwarded = $this->tryForwardUpstream($request, 'alocacoes_service', "/api/tecnicos/{$id}")) {
+            return $forwarded;
+        }
+
+        $tecnico = Tecnico::find((int) $id);
+        if (!$tecnico) {
+            return response()->json(['erro' => 'Técnico não encontrado.', 'id' => $id], 404);
+        }
+
+        return response()->json($this->formatTecnico($tecnico), 200);
+    }
+
+    /**
+     * POST /api/tecnicos
+     */
+    public function criarTecnico(Request $request): JsonResponse
+    {
+        if ($forwarded = $this->tryForwardUpstream($request, 'alocacoes_service', '/api/tecnicos')) {
+            return $forwarded;
+        }
+
+        $validated = $request->validate([
+            'nome' => 'required|string|max:255',
+            'especialidade' => 'required|string|max:255',
+            'telefone' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:255',
+            'regiao' => 'nullable|string|max:255',
+            'regiao_atuacao' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:100',
+            'status_disponibilidade' => 'nullable|string|max:100',
+        ]);
+
+        $statusStr = $validated['status'] ?? $validated['status_disponibilidade'] ?? 'Disponível';
+        $ativo = mb_strtolower($statusStr) !== 'ausente';
+        $email = $validated['email'] ?? (strtolower(preg_replace('/[^a-zA-Z0-9]/', '.', $validated['nome'])) . '.' . time() . '@nexora.com.br');
+
+        $tecnico = Tecnico::create([
+            'nome' => $validated['nome'],
+            'especialidade' => $validated['especialidade'],
+            'telefone' => $validated['telefone'] ?? '(41) 98888-0000',
+            'email' => $email,
+            'ativo' => $ativo,
+        ]);
+
+        $formatted = $this->formatTecnico($tecnico);
+        $formatted['regiao'] = $validated['regiao'] ?? $validated['regiao_atuacao'] ?? 'Curitiba - Centro';
+        $formatted['regiao_atuacao'] = $formatted['regiao'];
+        $formatted['status'] = $statusStr;
+        $formatted['status_disponibilidade'] = $statusStr;
+
+        return response()->json($formatted, 201);
+    }
+
+    /**
+     * PUT /api/tecnicos/{id}
+     */
+    public function atualizarTecnico(Request $request, string $id): JsonResponse
+    {
+        if ($forwarded = $this->tryForwardUpstream($request, 'alocacoes_service', "/api/tecnicos/{$id}")) {
+            return $forwarded;
+        }
+
+        $tecnico = Tecnico::find((int) $id);
+        if (!$tecnico) {
+            return response()->json(['erro' => 'Técnico não encontrado.', 'id' => $id], 404);
+        }
+
+        $validated = $request->validate([
+            'nome' => 'sometimes|string|max:255',
+            'especialidade' => 'sometimes|string|max:255',
+            'telefone' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:255',
+            'regiao' => 'nullable|string|max:255',
+            'status' => 'nullable|string|max:100',
+            'status_disponibilidade' => 'nullable|string|max:100',
+        ]);
+
+        if (isset($validated['nome'])) {
+            $tecnico->nome = $validated['nome'];
+        }
+        if (isset($validated['especialidade'])) {
+            $tecnico->especialidade = $validated['especialidade'];
+        }
+        if (array_key_exists('telefone', $validated) && $validated['telefone'] !== null) {
+            $tecnico->telefone = $validated['telefone'];
+        }
+        if (array_key_exists('email', $validated) && $validated['email'] !== null) {
+            $tecnico->email = $validated['email'];
+        }
+        $statusStr = $validated['status'] ?? $validated['status_disponibilidade'] ?? null;
+        if ($statusStr !== null) {
+            $tecnico->ativo = mb_strtolower($statusStr) !== 'ausente';
+        }
+        $tecnico->save();
+
+        $formatted = $this->formatTecnico($tecnico);
+        if ($statusStr !== null) {
+            $formatted['status'] = $statusStr;
+            $formatted['status_disponibilidade'] = $statusStr;
+        }
+
+        return response()->json($formatted, 200);
+    }
+
+    /**
+     * PATCH /api/tecnicos/{id}/disponibilidade
+     */
+    public function atualizarDisponibilidadeTecnico(Request $request, string $id): JsonResponse
+    {
+        if ($forwarded = $this->tryForwardUpstream($request, 'alocacoes_service', "/api/tecnicos/{$id}/disponibilidade")) {
+            return $forwarded;
+        }
+
+        $tecnico = Tecnico::find((int) $id);
+        if (!$tecnico) {
+            return response()->json(['erro' => 'Técnico não encontrado.', 'id' => $id], 404);
+        }
+
+        $statusStr = (string) ($request->input('status') ?? $request->input('disponibilidade') ?? 'Disponível');
+        $tecnico->ativo = mb_strtolower($statusStr) !== 'ausente';
+        $tecnico->save();
+
+        $formatted = $this->formatTecnico($tecnico);
+        $formatted['status'] = $statusStr;
+        $formatted['status_disponibilidade'] = $statusStr;
+        $formatted['disponivel'] = in_array(mb_strtolower($statusStr), ['disponível', 'disponivel'], true);
+
+        return response()->json($formatted, 200);
+    }
+
+    /**
+     * DELETE /api/tecnicos/{id}
+     */
+    public function excluirTecnico(Request $request, string $id): JsonResponse
+    {
+        if ($forwarded = $this->tryForwardUpstream($request, 'alocacoes_service', "/api/tecnicos/{$id}")) {
+            return $forwarded;
+        }
+
+        $tecnico = Tecnico::find((int) $id);
+        if (!$tecnico) {
+            return response()->json(['erro' => 'Técnico não encontrado.', 'id' => $id], 404);
+        }
+
+        $tecnico->delete();
+
+        return response()->json([
+            'removido' => true,
+            'id' => (int) $id,
+            'message' => 'Técnico removido com sucesso via API Gateway.',
+        ], 200);
+    }
+
+    private function formatTecnico(Tecnico $t): array
+    {
+        $ativas = (int) ($t->ordens_ativas_count ?? $t->ordensServico()->whereIn('situacao', [
+            OrdemServico::STATUS_ABERTA,
+            OrdemServico::STATUS_AGENDADA,
+            OrdemServico::STATUS_EM_EXECUCAO,
+        ])->count());
+
+        $status = !$t->ativo ? 'Ausente' : ($ativas > 0 ? 'Em Atendimento' : 'Disponível');
+
+        return [
+            'id' => $t->id,
+            'codigo' => 'TEC-' . str_pad((string) $t->id, 3, '0', STR_PAD_LEFT),
+            'nome' => $t->nome,
+            'especialidade' => $t->especialidade,
+            'telefone' => $t->telefone,
+            'email' => $t->email,
+            'regiao' => 'Curitiba - Grande Curitiba',
+            'regiao_atuacao' => 'Curitiba - Grande Curitiba',
+            'status' => $status,
+            'status_disponibilidade' => $status,
+            'disponivel' => $status === 'Disponível',
+            'ativo' => (bool) $t->ativo,
+            'ordensAtivas' => $ativas,
+            'bancoOrigem' => 'MongoDB Atlas (Free Tier)',
+        ];
+    }
+
     private function findOrdem(string $idOrCodigo): ?OrdemServico
     {
         $query = OrdemServico::with(['tecnico', 'itens']);

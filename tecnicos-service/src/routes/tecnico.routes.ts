@@ -5,11 +5,15 @@ import {
   createTecnico,
   updateTecnico,
   deleteTecnico,
-  updateDisponibilidade
+  updateDisponibilidade,
+  getMensageriaStatus,
+  receberEventoBroker
 } from '../controllers/tecnico.controller';
 
 const router = Router();
 
+router.get('/mensageria/status', getMensageriaStatus);
+router.post('/eventos', receberEventoBroker);
 router.get('/', listTecnicos);
 router.post('/', createTecnico);
 router.get('/:id', getTecnicoById);

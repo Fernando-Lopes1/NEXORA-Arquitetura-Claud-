@@ -1,4 +1,5 @@
 import { IDatabaseAdapter } from './adapter.interface';
+import { MongoAdapter } from './mongo.adapter';
 import { PostgresAdapter } from './postgres.adapter';
 import { SqliteAdapter } from './sqlite.adapter';
 import { config } from '../config/env';
@@ -10,7 +11,28 @@ export async function getDatabase(): Promise<IDatabaseAdapter> {
     return dbInstance;
   }
 
-  if (config.databaseUrl && config.databaseUrl.trim().length > 0) {
+  const mongoUri = config.mongodbUri || (config.databaseUrl.startsWith('mongodb') ? config.databaseUrl : '');
+
+  if (mongoUri && mongoUri.trim().length > 0) {
+    try {
+      console.log('🍃 Tentando conexão com MongoDB Atlas Free Tier (tecnicos-service)...');
+      const mongo = new MongoAdapter(mongoUri.trim(), config.mongodbDbName);
+      await mongo.connect();
+      const isConnected = await mongo.checkConnection();
+      if (isConnected) {
+        await mongo.initSchema();
+        console.log('✅ Conectado ao MongoDB Atlas com sucesso!');
+        dbInstance = mongo;
+        return dbInstance;
+      }
+      throw new Error('Falha no ping de conexão com MongoDB Atlas');
+    } catch (err: any) {
+      console.warn(`⚠️ Falha na conexão MongoDB Atlas (${err.message}).`);
+      console.warn('🔄 Ativando fallback autônomo para persistência local...');
+    }
+  }
+
+  if (config.databaseUrl && config.databaseUrl.trim().length > 0 && !config.databaseUrl.startsWith('mongodb')) {
     try {
       console.log('🔌 Tentando conexão com Cloud PostgreSQL (tecnicos-service)...');
       const pg = new PostgresAdapter(config.databaseUrl);
@@ -26,8 +48,8 @@ export async function getDatabase(): Promise<IDatabaseAdapter> {
       console.warn(`⚠️ Falha na conexão PostgreSQL (${err.message}).`);
       console.warn('🔄 Ativando fallback autônomo para SQLite local (data/tecnicos.sqlite)...');
     }
-  } else {
-    console.log('ℹ️ Nenhuma DATABASE_URL configurada. Inicializando com SQLite local (data/tecnicos.sqlite)...');
+  } else if (!mongoUri) {
+    console.log('ℹ️ Nenhuma MONGODB_URI configurada. Inicializando com SQLite local (data/tecnicos.sqlite)...');
   }
 
   const sqlite = new SqliteAdapter('tecnicos.sqlite');

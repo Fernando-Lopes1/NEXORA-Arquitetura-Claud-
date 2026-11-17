@@ -19,9 +19,9 @@ async function runAdversarialSuite() {
   const db = await getDatabase();
   console.log(`📦 Provedor de Banco de Dados Ativo: ${db.getProviderName()}`);
 
-  // 2. Sobe servidor em porta efêmera
+  // 2. Sobe servidor em porta efêmera estritamente em 127.0.0.1
   const server = http.createServer(app);
-  await new Promise<void>((resolve) => server.listen(0, resolve));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address() as any;
   const baseUrl = `http://127.0.0.1:${address.port}`;
   console.log(`🚀 Servidor de testes em execução em ${baseUrl}\n`);
