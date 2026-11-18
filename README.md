@@ -8,7 +8,7 @@
 
 ## 🎥 Vídeo de Demonstração (YouTube — Não Listado)
 
-- **Link do Vídeo:** *Aguardando publicação (demonstração na nuvem com todos os integrantes de câmera aberta)*
+- **Link do Vídeo:** https://youtu.be/WdI5NqVMGo8
 
 ---
 
